@@ -1,0 +1,7 @@
+You push open the mill door, and the hinges complain loudly enough to wake the mice. Inside, the air smells of mouldy flour and, underneath it, fresh smoke. The millstones are furred with dust and the sacks have split and gone grey, yet someone has swept a neat path to the hearth.
+
+Oda stays on the step with her arms folded. "This mill hasn't turned since last winter," she says, a little too quickly. "So whoever lit that fire, it wasn't a miller. Touch nothing you can't explain. By the millstones!"
+
+A glint shows behind the flour sacks by the far wall, or it could just be a trick of the light. Roll Perception to see what is really there.
+<<STATE>>
+{"commands": [{"type": "move_to", "target": "old_mill"}, {"type": "request_roll", "skill": "Perception", "dc": 12}], "state": {"time_advance_minutes": 15}}

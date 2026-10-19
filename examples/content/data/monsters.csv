@@ -1,0 +1,6 @@
+id,name,level,hp,ac,attack_bonus,damage,xp,habitat,sprite
+rust_wolf,Rust wolf,1,11,13,4,2d4+2,50,forest|road,creature-rust-wolf.png
+bog_ghoul,Bog ghoul,2,22,12,4,1d8+2,100,swamp,creature-bog-ghoul.png
+cinder_imp,Cinder imp,1,9,13,5,1d6+3,50,ruins|forge,creature-cinder-imp.png
+brass_sentinel,Brass sentinel,3,33,16,5,1d10+3,200,ruins,creature-brass-sentinel.png
+river_troll,River troll,4,52,14,6,2d6+4,450,river,creature-river-troll.png

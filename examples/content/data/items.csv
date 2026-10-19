@@ -1,0 +1,7 @@
+id,name,type,price,damage,ac_bonus,heal,weight,icon,description
+rusty_sword,Rusty sword,weapon,8,1d8,0,,3,item-rusty-sword.png,Pitted but still sharp on one edge.
+hunting_bow,Hunting bow,weapon,25,1d6,0,,2,item-hunting-bow.png,Range 80 ft.
+leather_coat,Leather coat,armor,10,,1,,10,item-leather-coat.png,Smells of rain and smoke.
+healing_draught,Healing draught,potion,25,,,2d4+2,0.5,item-healing-draught.png,Bitter and red.
+tallow_candle,Tallow candle,tool,1,,,,0.1,item-candle.png,Burns for one hour.
+brass_key,Brass key,quest,0,,,,0,item-brass-key.png,Warm to the touch.

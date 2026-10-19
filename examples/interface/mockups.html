@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brasswake Interface Mockups</title>
+<style>
+  /* ---------- page ---------- */
+  :root {
+    --bg: #0f1518; --panel: #172024; --panel-2: #1e2a2f; --line: #2c3b41;
+    --text: #e6e1d6; --muted: #9aa6a8; --accent: #d9a441; --hp: #c0453a; --ok: #5fa86b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 21px; margin: 48px 0 6px; padding-top: 16px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 28px 0 8px; color: var(--accent); }
+  p.lead, .note { color: var(--muted); }
+  nav a { color: var(--accent); margin-right: 14px; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--accent); color: var(--accent); margin-left: 6px; vertical-align: middle; }
+  .pros { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; font-size: 14px; }
+  .pros div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .pros b { display: block; margin-bottom: 2px; }
+  .pros ul { margin: 0; padding-left: 18px; }
+  @media (max-width: 700px) { .pros { grid-template-columns: 1fr; } }
+
+  /* ---------- a game screen (16:9 frame) ---------- */
+  .screen { position: relative; aspect-ratio: 16 / 9; width: 100%; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; display: flex; font-size: 13px; }
+  .screen.stacked { flex-direction: column; aspect-ratio: 9 / 14; max-width: 380px; }
+  .scene { position: relative; overflow: hidden;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,.08) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(rgba(0,0,0,.08) 1px, transparent 1px) 0 0 / 24px 24px,
+      #3f6b3a; }
+  .scene .river { position: absolute; top: 0; bottom: 0; left: 62%; width: 9%; background: #3b6f93; }
+  .scene .road  { position: absolute; top: 55%; left: 0; right: 0; height: 9%; background: #8a7350; }
+  .scene .bridge { position: absolute; top: 53%; left: 60%; width: 13%; height: 13%; background: #6b4d2e; }
+  .scene .obj { position: absolute; font-size: 22px; line-height: 1; transform: translate(-50%, -50%); }
+  .scene .label { position: absolute; transform: translate(-50%, 14px); font-size: 11px; background: rgba(0,0,0,.6); padding: 0 5px; border-radius: 3px; white-space: nowrap; }
+  .scene .fog { position: absolute; inset: 0; background: radial-gradient(circle at 35% 58%, transparent 32%, rgba(8,12,14,.85) 62%); }
+  .scene .path-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: .7; transform: translate(-50%, -50%); }
+  .hud { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 8px; align-items: center; z-index: 2; }
+  .hud .chip { background: rgba(0,0,0,.65); padding: 2px 8px; border-radius: 4px; }
+  .hpbar { width: 90px; height: 8px; background: #3a1d1a; border-radius: 4px; display: inline-block; vertical-align: middle; }
+  .hpbar i { display: block; height: 100%; width: 70%; background: var(--hp); border-radius: 4px; }
+  .minimap { position: absolute; right: 8px; bottom: 8px; width: 70px; height: 50px; border: 1px solid #aaa; background: rgba(0,0,0,.5); z-index: 2; }
+  .minimap i { position: absolute; left: 40%; top: 55%; width: 5px; height: 5px; background: var(--accent); }
+
+  .story { display: flex; flex-direction: column; background: var(--panel); border-left: 2px solid var(--line); min-width: 0; }
+  .stacked .story { border-left: 0; border-top: 2px solid var(--line); }
+  .tabs { display: flex; gap: 2px; background: var(--panel-2); padding: 4px 4px 0; font-size: 12px; flex-wrap: wrap; }
+  .tabs span { padding: 3px 8px; border-radius: 4px 4px 0 0; color: var(--muted); }
+  .tabs span.on { background: var(--panel); color: var(--text); }
+  .log { flex: 1; overflow: hidden; padding: 8px 12px; font-family: Georgia, serif; font-size: 13.5px; }
+  .log p { margin: 0 0 8px; }
+  .log p.old { opacity: .6; }
+  .log .you { color: var(--muted); font-family: system-ui, sans-serif; font-size: 12px; }
+  .log .roll { font-family: system-ui, sans-serif; font-size: 12px; background: var(--panel-2); border-left: 3px solid var(--accent); padding: 3px 8px; }
+  .log .typing::after { content: "▍"; animation: blink 1s steps(1) infinite; color: var(--accent); }
+  .actions { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .actions .input { flex: 1; min-width: 120px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; color: var(--muted); }
+  .btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; }
+  .btn.main { border-color: var(--accent); color: var(--accent); }
+
+  /* overlay layout */
+  .screen.overlay .scene { flex: 1; }
+  .screen.overlay .story { position: absolute; right: 12px; bottom: 12px; width: 44%; height: 52%; background: rgba(23,32,36,.88); border: 1px solid var(--line); border-radius: 8px; z-index: 3; }
+
+  /* ---------- keyword effects (the web/CSS version) ---------- */
+  .kw { display: inline-block; font-weight: 600; }
+  .kw-burn    { color: #ff8a3d; animation: flicker 1.1s infinite alternate; }
+  .kw-freeze  { color: #9fd8ff; text-shadow: 0 0 6px #6fc3ff; animation: shimmer 3s infinite; }
+  .kw-shock   { color: #ffe066; animation: jitter .18s infinite; }
+  .kw-poison  { color: #8fd16a; animation: sway 1.6s ease-in-out infinite; }
+  .kw-whisper { color: #b9b3c9; font-style: italic; font-weight: 400; animation: fade 2.4s ease-in-out infinite; }
+  .kw-holy    { color: #ffe9a8; animation: glow 2s ease-in-out infinite; }
+  .letters span { display: inline-block; animation: rise 1s ease-in-out infinite; }
+  @keyframes flicker { 0% { text-shadow: 0 0 2px #ff3d00; } 50% { text-shadow: 0 -2px 6px #ff7b00; color: #ffb347; } 100% { text-shadow: 0 -1px 3px #ff3d00; } }
+  @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+  @keyframes jitter { 0% { transform: translate(0,0); } 25% { transform: translate(1px,-1px); } 50% { transform: translate(-1px,1px); } 75% { transform: translate(1px,1px); } }
+  @keyframes sway { 0%, 100% { transform: skewX(0); } 50% { transform: skewX(-8deg); } }
+  @keyframes fade { 0%, 100% { opacity: .9; } 50% { opacity: .35; } }
+  @keyframes glow { 0%, 100% { text-shadow: 0 0 2px #ffd56b; } 50% { text-shadow: 0 0 10px #ffd56b; } }
+  @keyframes rise { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  @keyframes blink { 50% { opacity: 0; } }
+  /* players can turn effects off; the browser setting is respected too */
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+
+  /* ---------- small cards ---------- */
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .grid3, .grid2 { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .card h4 { margin: 0 0 6px; font-size: 15px; }
+  .src { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
+  .out { font-family: Georgia, serif; background: var(--panel-2); border-radius: 6px; padding: 6px 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+
+  /* storyboard */
+  .board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 800px) { .board { grid-template-columns: 1fr 1fr; } }
+  .frame { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+  .frame .n { color: var(--accent); font-weight: 700; }
+
+  /* mini panels */
+  .mini { position: relative; height: 210px; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; font-size: 12px; }
+  .mini .scene { flex: 6; }
+  .mini .side { flex: 4; background: var(--panel); border-left: 2px solid var(--line); padding: 8px; }
+  .drawer { position: absolute; top: 0; bottom: 0; left: 0; width: 46%; background: rgba(23,32,36,.95); border-right: 2px solid var(--accent); padding: 8px; z-index: 3; }
+  .pause { position: absolute; inset: 0; background: rgba(10,14,16,.92); display: grid; grid-template-columns: 110px 1fr; z-index: 3; }
+  .pause .menu { border-right: 1px solid var(--line); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .pause .menu span { padding: 2px 6px; border-radius: 4px; }
+  .pause .menu span.on { background: var(--panel-2); color: var(--accent); }
+  .pause .body { padding: 8px 12px; }
+  .row { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding: 2px 0; }
+
+  /* copy-paste dialog */
+  .dialog { max-width: 560px; margin: 10px auto; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 14px 16px; }
+  .dialog .box { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); height: 70px; overflow: hidden; margin: 6px 0 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Brasswake Reach: interface examples</h1>
+  <p class="lead">Static mockups. Nothing here is playable: the goal is to show the structure of each screen and compare options. The scene uses placeholder shapes and emoji where the artist's tiles and sprites will go.</p>
+  <nav>
+    <a href="#layout">1. Main screen</a>
+    <a href="#keywords">2. Keyword effects</a>
+    <a href="#panels">3. Sheet / Pack / Quests</a>
+    <a href="#turn">4. One AI turn</a>
+    <a href="#move">5. Movement</a>
+    <a href="#ai">6. AI connection</a>
+  </nav>
+
+  <!-- =========================================================== -->
+  <h2 id="layout">1. Main screen layout: 60% scene, 40% story</h2>
+  <p class="note">Same content in three arrangements. In Godot each one is a different container around the same two nodes (see <code>godot/scene_tree.md</code>).</p>
+
+  <h3>Option A: side by side <span class="badge">recommended for computers</span></h3>
+  <div class="screen">
+    <div class="scene" style="flex: 6">
+      <div class="hud"><span class="chip">❤ 14/20 <span class="hpbar"><i></i></span></span><span class="chip">🪙 37</span><span class="chip">☀ Day 3, 16:00</span><span class="chip">📍 Mill Road</span></div>
+      <div class="road"></div><div class="river"></div><div class="bridge"></div>
+      <span class="obj" style="left:12%;top:28%">🌲</span><span class="obj" style="left:20%;top:20%">🌲</span><span class="obj" style="left:8%;top:78%">🌲</span>
+      <span class="obj" style="left:45%;top:32%">🏚️</span><span class="label" style="left:45%;top:32%">Old Mill</span>
+      <span class="obj" style="left:35%;top:59%">🧙</span><span class="label" style="left:35%;top:59%">You</span>
+      <span class="obj" style="left:54%;top:72%">🐺</span><span class="label" style="left:54%;top:72%">Rust wolf</span>
+      <span class="obj" style="left:84%;top:40%">🌲</span><span class="obj" style="left:90%;top:70%">🌲</span>
+      <div class="fog"></div>
+      <div class="minimap"><i></i></div>
+    </div>
+    <div class="story" style="flex: 4">
+      <div class="tabs"><span class="on">Story</span><span>Sheet</span><span>Pack</span><span>Quests</span><span>Codex</span></div>
+      <div class="log">
+        <p class="old">The road bends toward the mill. Its wheel has not turned in years.</p>
+        <p class="you">▶ You: I look inside the mill.</p>
+        <p>Smoke curls from the doorway. Somewhere inside, a <span class="kw kw-burn">fire</span> still <span class="kw kw-burn">burns</span>, low and patient.</p>
+        <p class="roll">🎲 Perception check: 14 + 2 = <b>16</b> vs DC 12, success</p>
+        <p class="typing">Behind you, something growls. A <span class="kw kw-shock">crackle</span> of static runs along the wolf's rusted spine…</p>
+      </div>
+      <div class="actions"><span class="input">What do you do?</span><span class="btn main">Act</span><span class="btn">🎲 d20</span></div>
+    </div>
+  </div>
+  <div class="pros">
+    <div><b>Good</b><ul><li>Scene and text always visible, nothing hidden.</li><li>Fits wide computer screens (16:9).</li><li>Easy to build: one horizontal container.</li></ul></div>
+    <div><b>Watch out</b><ul><li>On phones (portrait) both halves get too narrow.</li><li>Option A+: use a split container so players can drag the divider.</li></ul></div>
+  </div>
+
+  <h3>Option B: stacked <span class="badge">for phones / portrait</span></h3>
+  <div class="screen stacked">
+    <div class="scene" style="flex: 6">
+      <div class="hud"><span class="chip">❤ 14/20</span><span class="chip">🪙 37</span><span class="chip">☀ 16:00</span></div>
+      <div class="road"></div><div class="river"></div><div class="bridge"></div>
+      <span class="obj" style="left:45%;top:32%">🏚️</span>
+      <span class="obj" style="left:35%;top:59%">🧙</span>
+      <span class="obj" style="left:54%;top:74%">🐺</span>
+      <span class="obj" style="left:14%;top:26%">🌲</span>
+      <div class="fog"></div>
+    </div>
+    <div class="story" style="flex: 4">
+      <div class="tabs"><span class="on">Story</span><span>Sheet</span><span>Pack</span><span>⋯</span></div>
+      <div class="log">
+        <p>Somewhere inside, a <span class="kw kw-burn">fire</span> still <span class="kw kw-burn">burns</span>.</p>
+        <p class="typing">Behind you, something growls…</p>
+      </div>
+      <div class="actions"><span class="input">What do you do?</span><span class="btn main">Act</span></div>
+    </div>
+  </div>
+  <div class="pros">
+    <div><b>Good</b><ul><li>Works on phones held upright.</li><li>The game can switch A ↔ B automatically when the window is taller than wide.</li></ul></div>
+    <div><b>Watch out</b><ul><li>Less text fits on screen: needs shorter AI replies or scrolling.</li><li>The scene becomes a wide strip: the camera shows less of the world.</li></ul></div>
+  </div>
+
+  <h3>Option C: full-screen scene with floating story panel <span class="badge">cinematic</span></h3>
+  <div class="screen overlay">
+    <div class="scene">
+      <div class="hud"><span class="chip">❤ 14/20 <span class="hpbar"><i></i></span></span><span class="chip">🪙 37</span><span class="chip">☀ Day 3, 16:00</span></div>
+      <div class="road"></div><div class="river"></div><div class="bridge"></div>
+      <span class="obj" style="left:12%;top:28%">🌲</span><span class="obj" style="left:20%;top:20%">🌲</span>
+      <span class="obj" style="left:30%;top:32%">🏚️</span><span class="label" style="left:30%;top:32%">Old Mill</span>
+      <span class="obj" style="left:24%;top:59%">🧙</span>
+      <span class="obj" style="left:40%;top:74%">🐺</span>
+      <div class="fog"></div>
+    </div>
+    <div class="story">
+      <div class="tabs"><span class="on">Story</span><span>Sheet</span><span>Pack</span><span>Quests</span><span>— hide</span></div>
+      <div class="log">
+        <p>Somewhere inside, a <span class="kw kw-burn">fire</span> still <span class="kw kw-burn">burns</span>, low and patient.</p>
+        <p class="typing">Behind you, something growls…</p>
+      </div>
+      <div class="actions"><span class="input">What do you do?</span><span class="btn main">Act</span></div>
+    </div>
+  </div>
+  <div class="pros">
+    <div><b>Good</b><ul><li>The world looks biggest; the panel can be hidden while exploring.</li><li>Feels like a modern RPG.</li></ul></div>
+    <div><b>Watch out</b><ul><li>The panel covers part of the action; the camera must keep the hero out from under it.</li><li>Text over a busy background is harder to read.</li></ul></div>
+  </div>
+
+  <!-- =========================================================== -->
+  <h2 id="keywords">2. Keyword effects</h2>
+  <p class="note">What each effect could look like (CSS here; in Godot the same idea is a <code>RichTextEffect</code>, see <code>godot/narration/effects/</code>). Effects stop when the player turns on "reduce motion".</p>
+  <div class="card" style="font-family: Georgia, serif; font-size: 17px; line-height: 2">
+    <span class="kw kw-burn">burn</span> ·
+    <span class="kw kw-freeze">freeze</span> ·
+    <span class="kw kw-shock">shock</span> ·
+    <span class="kw kw-poison">poison</span> ·
+    <span class="kw kw-whisper">whisper</span> ·
+    <span class="kw kw-holy">holy</span> ·
+    per-letter version: <span class="kw kw-burn letters"><span>f</span><span style="animation-delay:.15s">l</span><span style="animation-delay:.3s">a</span><span style="animation-delay:.45s">m</span><span style="animation-delay:.6s">e</span><span style="animation-delay:.75s">s</span></span>
+  </div>
+
+  <h3>Who decides which words get an effect?</h3>
+  <div class="grid3">
+    <div class="card">
+      <h4>Option A: the AI writes tags</h4>
+      AI reply:
+      <div class="src">The [burn]torch[/burn] gutters. Your breath turns to [freeze]mist[/freeze].</div>
+      Shown:
+      <div class="out">The <span class="kw kw-burn">torch</span> gutters. Your breath turns to <span class="kw kw-freeze">mist</span>.</div>
+      <p>✔ Precise: the AI knows "torch" is on fire here.<br>✘ The AI sometimes forgets tags or invents new ones, so the game must remove unknown tags.<br>✘ In copy-paste mode the player sees the tags.</p>
+    </div>
+    <div class="card">
+      <h4>Option B: a word list (keywords.csv)</h4>
+      Word list (the writer edits it):
+      <div class="src">burn, en, fire|flame|burn|burned|ember
+burn, fr, feu|flamme|brûle|braise</div>
+      Shown:
+      <div class="out">You <span class="kw kw-burn">burn</span> the letter. He <span class="kw kw-burn">burned</span> his bridges long ago.</div>
+      <p>✔ Free, consistent, the writer controls it.<br>✘ Matches metaphors too: "burned his bridges" should not be on fire.<br>✘ Needs every word form, even more in French (brûle, brûlée, brûlant…).</p>
+    </div>
+    <div class="card">
+      <h4>Option C: both <span class="badge">recommended</span></h4>
+      Keep the AI's valid tags, then tag remaining words from the list:
+      <div class="src">The [burn]torch[/burn] gutters near the fire.</div>
+      Shown:
+      <div class="out">The <span class="kw kw-burn">torch</span> gutters near the <span class="kw kw-burn">fire</span>.</div>
+      <p>✔ The AI can add special moments; the list covers the rest.<br>✔ Works even when the AI forgets.<br>✘ Slightly more code (see <code>keyword_tagger.gd</code>).</p>
+    </div>
+  </div>
+
+  <h3>Keeping it fast</h3>
+  <table>
+    <tr><th>Problem</th><th>Solution in the examples</th></tr>
+    <tr><td>Hundreds of animated words in a long log slow the game down.</td><td>Only the last few story entries animate. Older ones keep their colour but stop moving.</td></tr>
+    <tr><td>Too many effects are tiring to read.</td><td>Limit to about 6 effects and a few tagged words per reply; a "reduce effects" setting.</td></tr>
+  </table>
+
+  <!-- =========================================================== -->
+  <h2 id="panels">3. Sheet, Pack, Quests, Codex: where do they open?</h2>
+  <div class="grid3">
+    <div>
+      <div class="mini">
+        <div class="scene"><span class="obj" style="left:40%;top:55%">🧙</span></div>
+        <div class="side">
+          <div class="tabs"><span>Story</span><span class="on">Pack</span><span>Sheet</span></div>
+          <div class="row"><span>🗡 Rusty sword</span><span>1d8</span></div>
+          <div class="row"><span>🧪 Healing draught ×2</span><span>2d4+2</span></div>
+          <div class="row"><span>🕯 Tallow candle ×5</span><span>—</span></div>
+          <div class="row"><span>🪙 Gold</span><span>37</span></div>
+        </div>
+      </div>
+      <h4>Option A: tabs inside the story panel <span class="badge">recommended</span></h4>
+      <p class="note">The scene keeps running. Simple. But the story is hidden while a tab is open.</p>
+    </div>
+    <div>
+      <div class="mini">
+        <div class="scene"><span class="obj" style="left:70%;top:55%">🧙</span></div>
+        <div class="drawer">
+          <b>Character sheet</b>
+          <div class="row"><span>Level 2 Ranger</span><span>XP 410/900</span></div>
+          <div class="row"><span>STR 12 · DEX 16 · CON 13</span></div>
+          <div class="row"><span>AC 14</span><span>Speed 30</span></div>
+          <div class="row"><span>Stealth +5</span><span>Survival +4</span></div>
+        </div>
+        <div class="side"><p>Story stays visible…</p></div>
+      </div>
+      <h4>Option B: drawer over the scene</h4>
+      <p class="note">Story stays visible while you check your sheet. The drawer hides part of the scene.</p>
+    </div>
+    <div>
+      <div class="mini">
+        <div class="scene"></div>
+        <div class="pause">
+          <div class="menu"><span>Sheet</span><span class="on">Quests</span><span>Pack</span><span>Codex</span><span>Map</span><span>Save</span></div>
+          <div class="body">
+            <b>The Silent Mill</b> <span class="note">(active)</span>
+            <div class="row"><span>☑ Reach the mill</span></div>
+            <div class="row"><span>☐ Find who lit the fire</span></div>
+            <div class="row"><span>☐ Return to Miller Oda</span></div>
+          </div>
+        </div>
+      </div>
+      <h4>Option C: full-screen pause menu</h4>
+      <p class="note">Classic RPG menu, lots of room. Pauses the game, so it fits real-time movement best.</p>
+    </div>
+  </div>
+
+  <!-- =========================================================== -->
+  <h2 id="turn">4. One AI turn, step by step</h2>
+  <p class="note">The game owns the rules and rolls every die. The AI only narrates and asks for things through a short list of checked commands.</p>
+  <div class="board">
+    <div class="frame"><span class="n">1. Player acts</span><br>Types "I cross the bridge" or clicks the bridge. The game builds the prompt: rules + codex + story summary + current state + action.</div>
+    <div class="frame"><span class="n">2. Waiting</span><br>The input is locked and a small quill animates: <i>"The DM is thinking…"</i>. The hero can idle-animate. Usually 2–10 seconds.</div>
+    <div class="frame"><span class="n">3. Reply arrives</span><br>The game splits it into narration and a JSON block, checks every command against the allowed list and drops anything unknown.</div>
+    <div class="frame"><span class="n">4. Play it out</span><br>Narration types out with keyword effects; then the commands run: hero walks to the bridge, a wolf appears, rain starts. A requested roll shows the dice tray.</div>
+  </div>
+  <h3>What the AI sends back (the old prototype's format, kept so copy-paste mode still works)</h3>
+  <div class="src">The planks groan as you step onto the bridge. Below, the river runs [freeze]cold[/freeze] and fast.
+On the far bank, a rust wolf lifts its head.
+&lt;&lt;STATE&gt;&gt;
+{"commands": [
+   {"type": "move_to", "target": "mill_bridge"},
+   {"type": "spawn", "creature": "rust_wolf", "near": "mill_bridge_east"},
+   {"type": "request_roll", "skill": "Perception", "dc": 13}
+ ],
+ "state": {"time_advance_minutes": 5}}</div>
+
+  <!-- =========================================================== -->
+  <h2 id="move">5. How the hero moves</h2>
+  <table>
+    <tr><th>Option</th><th>How it plays</th><th>Fits with</th><th>Code example</th></tr>
+    <tr><td><b>A. Free movement</b> (arrows / ZQSD)</td><td>Walk anywhere in real time. The AI is called on events: entering a place, talking, using something.</td><td>Open-world feel. Needs collisions and a pause menu.</td><td><code>world/movement_free.gd</code></td></tr>
+    <tr><td><b>B. Click to move</b> <span class="badge">recommended start</span></td><td>Click a place or a typed action; the hero walks there along a path. The AI can also send <code>move_to</code>.</td><td>Text-first play, mouse and touch screens. Same path-finding the AI uses.</td><td><code>world/movement_click.gd</code></td></tr>
+    <tr><td><b>C. Grid steps</b> (turn by turn)</td><td>One tile per key press; creatures move after you, like a board game.</td><td>D&amp;D feel, simple combat on the same grid. Slower exploration.</td><td><code>world/movement_grid.gd</code></td></tr>
+  </table>
+  <div class="mini" style="margin-top:12px; height: 160px">
+    <div class="scene" style="flex:1">
+      <div class="road"></div><div class="river"></div><div class="bridge"></div>
+      <span class="obj" style="left:20%;top:59%">🧙</span>
+      <span class="path-dot" style="left:28%;top:59%"></span><span class="path-dot" style="left:36%;top:59%"></span><span class="path-dot" style="left:44%;top:59%"></span><span class="path-dot" style="left:52%;top:59%"></span><span class="path-dot" style="left:60%;top:59%"></span>
+      <span class="obj" style="left:66%;top:59%">❌</span><span class="label" style="left:66%;top:59%">clicked: bridge</span>
+    </div>
+  </div>
+  <p class="note">Option B: the dots are the path found by <code>AStarGrid2D</code> around trees and water, using the bridge.</p>
+
+  <!-- =========================================================== -->
+  <h2 id="ai">6. AI connection: three modes behind one interface</h2>
+  <div class="grid3">
+    <div class="card"><h4>Copy-paste <span class="badge">free, always available</span></h4>The game copies the prompt; the player pastes it into a Claude chat and pastes the reply back. <code>ai/copy_paste_adapter.gd</code></div>
+    <div class="card"><h4>Our proxy</h4>The game calls a small Cloudflare Worker that holds <i>our</i> API key and talks to Claude. Easiest for players; we pay. <code>ai/proxy_adapter.gd</code> + <code>proxy/worker.ts</code></div>
+    <div class="card"><h4>Player's own key</h4>The player pastes their own key in Settings; it stays on their device. No cost for us. <code>ai/own_key_adapter.gd</code></div>
+  </div>
+  <h3>Copy-paste dialog</h3>
+  <div class="dialog">
+    <b>Dungeon Master: copy-paste mode</b>
+    <p class="note" style="margin:4px 0">1. The prompt is copied. Paste it into your Claude chat.</p>
+    <div class="box">You are the Dungeon Master of Brasswake Reach… RULES… CODEX… STORY SO FAR… STATE {"hp":14,"gold":37,…} PLAYER ACTION: I cross the bridge</div>
+    <p class="note" style="margin:4px 0">2. Paste Claude's whole reply here:</p>
+    <div class="box">Paste the reply…</div>
+    <span class="btn">Copy again</span> <span class="btn main">Continue the story</span>
+  </div>
+</main>
+</body>
+</html>

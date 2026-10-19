@@ -1,0 +1,21 @@
+# Godot editor cache and game exports
+.godot/
+builds/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node / Cloudflare Worker (later)
+node_modules/
+.wrangler/
+
+# Secrets: never commit API keys
+.env
+.dev.vars
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
