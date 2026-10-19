@@ -1,7 +1,8 @@
 # Guide pour l'artiste
 
-> Exemple : les tailles et le style seront fixés après les réponses au questionnaire
-> (questions 9 à 14). Dépose tes fichiers dans le dossier OneDrive `art/`.
+> Choisi le 19 octobre (questionnaire) : **pixel art, vue de dessus, personnages en 8 directions**,
+> images gratuites temporaires en attendant tes dessins. La taille des cases (question 10) reste à choisir.
+> Dépose tes fichiers dans le dossier OneDrive `art/`.
 
 ## Format
 - **PNG** avec fond transparent. Ou le fichier **Aseprite** (`.aseprite`) si tu utilises Aseprite :
@@ -30,9 +31,16 @@ Une planche par personnage : **une ligne par animation**, toutes les images de l
 | 1 | `idle_down` (immobile, face) | 2 |
 | 2 | `walk_down` | 4 |
 | 3 | `walk_up` | 4 |
-| 4 | `walk_left` | 4 |
-| 5 | `walk_right` *(ou on retourne walk_left, ça fait une ligne de moins)* | 4 |
-| 6 | `attack_down` | 3 |
+| 4 | `walk_right` | 4 |
+| 5 | `walk_down_right` (diagonale) | 4 |
+| 6 | `walk_up_right` (diagonale) | 4 |
+| 7 | `attack_down` | 3 |
+| 8 | `walk_left` *(facultatif)* | 4 |
+| 9 | `walk_down_left` *(facultatif)* | 4 |
+| 10 | `walk_up_left` *(facultatif)* | 4 |
+
+- **Lignes 8 à 10 facultatives :** sans elles, le jeu retourne les lignes « right » (effet miroir). Ça fait 3 lignes de moins à dessiner.
+- **Pour commencer, 4 directions suffisent** (`walk_down`, `walk_up`, `walk_right`) : en attendant les diagonales, le jeu utilise `walk_right` (ou son miroir).
 
 Dans Aseprite, mets un **tag** par animation avec exactement ces noms.
 

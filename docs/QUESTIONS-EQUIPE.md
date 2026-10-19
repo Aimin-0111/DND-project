@@ -2,6 +2,9 @@
 
 Répondez avec le numéro et la lettre (ex. : *1B, 2A…*). Plusieurs réponses possibles quand c'est indiqué. Vous pouvez toujours répondre « autre : … ».
 
+> **Réponses reçues le 19 octobre 2026 :** 2, 3, 4, 5, 6, 7, 9, 11, 12, 14 (voir [PLAN.md](PLAN.md#-team-answers-october-19-2026)).
+> **Encore à répondre :** 1, 8 (« on va voir »), 10, 13, 15, 16, 17, 18 (accès au OneDrive), 19 à 23.
+
 ### 🎮 Le jeu
 
 **1. Sur quoi doit-on pouvoir jouer en priorité ?**

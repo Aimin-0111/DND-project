@@ -1,48 +1,50 @@
 # Brasswake Reach
 
-A solo tabletop RPG played in the browser, with an AI Dungeon Master that narrates each turn.
+A solo RPG with an AI Dungeon Master that narrates each turn. About 40% of the screen is the story (narration with animated keywords, e.g. "burn" flickers like fire) and about 60% is an animated world (RPG + open world).
 
-- Live site: https://brasswake-49a500.netlify.app (static site on Netlify)
-- Panels: Roll d20, Act, Dice tray, Sheet, Pack, Chart, Codex, Quests, Lore, Story, Ledger
-- Game state shown in the UI: HP, gold, a Rewind button, "Import save file"
-- Current AI loop (copy-paste mode): each turn the game builds a full prompt with everything the AI needs. The player pastes it into a Claude chat, then pastes the reply back into the game ("The AI's reply", "Continue the story"). There is also a "Test connection" button.
+## Where things are
 
-## Current status (Oct 17, 2026)
+- **Spec:** `SPEC.md` (capability map, shared rules, boundaries, M1 success criteria) and one `SPEC-<module id>.md` per module. When a decision changes, update the spec before the code.
+- **M1 plan:** `tasks/plan.md` (decisions, risks, cut list) and `tasks/todo.md` (26 tasks with acceptance criteria). Work one task at a time, in order.
+- **Project plan and team answers:** `docs/PLAN.md`. Team questionnaire (French): `docs/QUESTIONS-EQUIPE.md`.
+- **Examples:** `examples/` (mockups, Godot example scripts, the Haiku DM test). Reference only, never shipped: the scripts move into `game/src/` during the tasks.
 
-- This folder has **no source code yet**. The team plans to **start over** with a fresh codebase.
-- The old version's source is in `C:\Users\aimin\Downloads\brasswake-reach.zip`: about 2,550 lines of plain JS, no dependencies. `build.sh` joins the files into one HTML file. Use it as a reference (rules, DM prompt, save migration, API adapters), not as a base.
-  - The DM protocol: narration, then a `<<STATE>>` line, then one JSON object. The page owns state and rolls every die.
-  - Old weak points for teamwork: all art is drawn in code (`sprites.js`, `creatures.js`, `icons.js`, `map.js` canvas), and the game text lives inside JS (`data.js`), so the artist and writer can't edit their own work.
+## Current status (Oct 19, 2026)
+
+- The spec and the M1 plan are approved. No game code yet: the next step is Task 1 (Godot project skeleton + test runner).
+- M1 builds are web exports played on the lead's computer from `localhost`. No itch.io upload for now.
+- Repo: public, https://github.com/Aimin-0111/DND-project, branch `main`.
 
 ## Team
 
-- 3 people: the lead (code, numbers/balance), an artist, and a writer. The artist and writer don't use GitHub or code.
-- Keep art and writing in plain files they can edit without code (image files, Markdown/text, spreadsheets), loaded by the game.
+- 4 people: the lead (code, numbers/balance, AI), Alban (a second programmer, on GitHub), an artist and a writer. The artist and writer don't use GitHub or code.
+- Art and writing are plain files the artist and writer edit without code (images, Markdown/text, spreadsheets). They share them through the school OneDrive, and the lead copies them into `game/content/`. Never put the Git repo inside OneDrive.
 - The lead knows Python, C++, HTML and CSS. Prefer tools close to those.
 - `..\dnd-main-alpha` is an empty Godot 4.7 project.
 
-## Current direction (Oct 17, 2026) — see `docs/PLAN.md`
+## Decisions
 
-The vision grew: about 40% narration text with animated keywords (e.g. "burn" flickers like fire) and about 60% animated scene (RPG + open world). This **replaces** the earlier "stay on the web / Netlify" decision.
+- **Engine:** Godot 4.7 + GDScript (proposed), kept or replaced by TypeScript + Phaser 4 at the M1 gate. Godot console exe: `C:\2026-2027\DND project\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`.
+- **Tests:** a small home-made runner (`game/tests/run_all.gd`) until the engine decision.
+- **Hosting:** itch.io after M1 (private page first). Cloudflare Workers as the AI key proxy (M2). Not Netlify.
+- **Team answers (Oct 19):**
+  - English + French, chosen at the first launch;
+  - magic with a light steampunk touch;
+  - pixel art, top-down view, 8 walking directions; free placeholder art first;
+  - turn-based dice fights with animation;
+  - important places made by hand, the rest generated and stored;
+  - the AI narrates, the game owns the rules and dice.
 
-- **Proposed engine: Godot 4 (GDScript)**, confirmed or rejected by the M1 prototype. Fallback: TypeScript + Phaser 4.
-- **Hosting:** itch.io for the game, Cloudflare Workers as the AI key proxy. Not Netlify.
-- **Sharing:** code in a private GitHub repo (lead only). Art and writing go through the school OneDrive. Never put the Git repo inside OneDrive.
-- Open team questions are in `docs/QUESTIONS-EQUIPE.md` (French). Update the plan when the answers come in.
+  Details are in `docs/PLAN.md`.
 
-## Earlier web architecture (superseded; still useful ideas: versioned saves, action log, AI adapter, seeded RNG)
+## Old version (reference only)
 
-- **Language and build:** TypeScript + Vite, still deployed as a static site.
-- **Pure game core:** a module with no DOM access that holds state, rules, dice and prompt building. It is deterministic (same input, same output) and uses a seeded RNG so dice rolls are reproducible and testable.
-- **State:** one serializable state object with a `version` field and migration functions, so old save files keep loading.
-- **Action log + snapshots:** record every player action and derive state from the log. This powers Rewind, debugging and replays.
-- **AI adapter:** one interface, `generateTurn(context) -> reply`, with swappable implementations:
-  - copy-paste mode (free default, always kept working as a fallback)
-  - direct API mode through a Netlify Function that holds the API key
-  - The adapter validates and parses every reply. AI output is untrusted.
-- **UI layer:** only renders state and dispatches actions. Svelte is the suggested pick; Preact or Solid are alternatives.
-- **Persistence:** IndexedDB for autosave (localStorage is too small for long campaigns), plus JSON export/import of save files.
-- **Delivery:** optionally a PWA with a service worker for offline play.
+- The first prototype was a plain-JS page on Netlify (https://brasswake-49a500.netlify.app). Its panels: Roll d20, Act, Dice tray, Sheet, Pack, Chart, Codex, Quests, Lore, Story, Ledger. It had HP, gold, Rewind and "Import save file".
+- Its copy-paste loop: the game builds a full prompt, the player pastes it into a Claude chat and pastes the reply back.
+- Source: `C:\Users\aimin\Downloads\brasswake-reach.zip` (about 2,550 lines, no dependencies). Use it as a reference (rules, DM prompt, save migration, API adapters), not as a base.
+  - The DM protocol, kept in the new spec: narration, then a `<<STATE>>` line, then one JSON object. The game owns the state and rolls every die.
+  - Why it's being replaced: the art was drawn in code and the game text lived inside JS, so the artist and writer couldn't edit their own work.
+- Ideas from the earlier web architecture that the spec keeps: a pure, deterministic game core with a seeded RNG; one versioned state with migrations; an action log for Rewind; one AI connection interface whose replies are always checked.
 
 ## AI cost study (Oct 16, 2026)
 
@@ -57,7 +59,9 @@ The vision grew: about 40% narration text with animated keywords (e.g. "burn" fl
 
 ## Guidelines for working on this codebase
 
-- Never put an API key in client-side code. Use the Netlify Function, or let each player paste their own key and store it locally.
+- Follow the boundaries in `SPEC.md` (Always / Ask first / Never). Ask before committing or pushing.
+- Never commit an API key or other secret: **the repo is public**. Our key will live in the proxy (M2). In own-key mode, the player's key stays in the settings file on their device: never in a save, a log or a build.
 - Don't break existing save files: add a migration whenever the state shape changes.
 - Keep copy-paste mode working alongside any API mode.
-- Avoid canvas, WebGL or a game engine unless a specific feature needs it (e.g. animated dice or a map), and then use it only for that component.
+- Send every AI reply through the `dm` reply checks before it touches the state, the story or the world.
+- Take every UI string from the translation table (EN + FR).
