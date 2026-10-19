@@ -1,0 +1,40 @@
+key,fr,en
+ui.title,Brasswake Reach,Brasswake Reach
+ui.act,Agir,Act
+ui.roll,Lancer les dés,Roll dice
+ui.save,Sauvegarder,Save
+ui.load,Charger,Load
+ui.language,Langue,Language
+ui.copy_prompt,Copier le prompt,Copy prompt
+ui.paste_reply,Coller la réponse,Paste reply
+ui.cancel,Annuler,Cancel
+ui.continue,Continuer,Continue
+ui.waiting,En attente du MJ IA,Waiting for the AI DM
+ui.error,Erreur,Error
+ui.saved,Partie sauvegardée,Game saved
+ui.loaded,Partie chargée,Game loaded
+ui.ready,Prêt,Ready
+ui.turn_action,Que fais-tu ?,What do you do?
+hero.kael.name,Kael,Kael
+location.mill_road.name,Route du moulin,Mill Road
+location.mill_bridge.name,Vieux pont,Old Bridge
+location.old_mill.name,Vieux moulin,Old Mill
+npc.oda.name,Oda la meunière,Oda the Miller
+monster.rust_wolf.name,Loup de rouille,Rust Wolf
+item.rusty_sword.name,Épée rouillée,Rusty Sword
+item.healing_draught.name,Potion de soin,Healing Draught
+quest.the_silent_mill.title,Le moulin silencieux,The Silent Mill
+quest.the_silent_mill.stage0,Aller au moulin,Go to the mill
+quest.the_silent_mill.stage1,Trouver qui a allumé le feu,Find who lit the fire
+quest.the_silent_mill.stage2,Revenir voir Oda,Return to Oda
+ui.hp,PV,HP
+ui.gold,Or,Gold
+ui.save_failed,Échec de la sauvegarde,Save failed
+ui.load_failed,Échec du chargement,Load failed
+ui.no_save,Aucune sauvegarde,No save file
+ui.unknown_error,Erreur inconnue,Unknown error
+ui.roll_requested,Lancer demandé,Roll requested
+ui.spawned,Apparu,Spawned
+ui.despawned,Retiré,Despawned
+ui.weather,Météo,Weather
+ui.emote,Émotion,Emote

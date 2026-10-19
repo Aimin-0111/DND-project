@@ -6,9 +6,9 @@
 
 ## 0. TL;DR
 
-- **Dépôt de conception, pas encore un jeu.** Il n'y a ni `game/`, ni scène Godot, ni build jouable.
-- **Cible proposée :** Godot 4 (GDScript) + itch.io + proxy Cloudflare Workers. Godot sera confirmé ou rejeté par le prototype M1 ; repli : TypeScript + Phaser 4.
-- **`examples/` est statique.** Les scripts GDScript ont été parse-checkés, mais pas exécutés dans une vraie scène.
+- **Tranche M1 locale jouable.** `game/` contient la zone, le héros, le récit animé, la boucle IA copier-coller, la sauvegarde et FR/EN. La page itch.io et le test avec un vrai modèle restent à faire.
+- **Cible :** Godot 4.7.2 (GDScript) + itch.io + proxy Cloudflare Workers plus tard. Godot sera confirmé ou rejeté par le playtest M1 ; repli : TypeScript + Phaser 4.
+- **`examples/` reste une référence statique** ; le code vivant est dans `game/`.
 - **Toute sortie IA est non fiable.** Elle passe par `DmReplyParser` ; ne jamais contourner cette validation.
 - **Vérifier avant d'affirmer.** Ne jamais prétendre avoir lancé un test sans avoir exécuté la commande et lu sa sortie.
 
@@ -18,10 +18,11 @@
 |---|---|---|
 | 1 | `README.md` | État réel, TODO, prochaines actions, journal |
 | 2 | ce fichier | Règles, contrats, conventions |
-| 3 | `docs/PLAN.md` | Vision, jalons, choix, rôles |
-| 4 | `examples/README.md` | Ce que contient chaque exemple et quelles options sont comparées |
-| 5 | `examples/content/...` | Seulement si la tâche touche l'art, l'écriture ou les données |
-| 6 | `CLAUDE.md` | Contexte historique et ancienne architecture web (supplantée) |
+| 3 | `SPEC.md` + `tasks/plan.md` + `tasks/todo.md` | Contrats M1, plan approuvé, avancement détaillé |
+| 4 | `docs/PLAN.md` | Vision, jalons, choix, rôles |
+| 5 | `game/content/...` | Seulement si la tâche touche l'art, l'écriture ou les données |
+| 6 | `docs/m1-ai-tests.md` + `docs/m1-ac.md` | Limites IA et état des critères M1 |
+| 7 | `CLAUDE.md` | Contexte historique et ancienne architecture web (supplantée) |
 
 ## 2. Règles dures
 
@@ -37,11 +38,11 @@
 | **R6** | `NEVER` placer le dépôt Git dans OneDrive. Le code va sur GitHub ; l'art et l'écriture passent par OneDrive. |
 | **R7** | `MUST` garder le cœur du jeu déterministe et testable : dés seedés, mêmes entrées → mêmes sorties, aucune dépendance à l'UI. |
 | **R8** | `MUST` mettre à jour le README (cases + journal) quand une tâche est terminée. `NEVER` cocher sans preuve vérifiable. |
-| **R9** | `MUST` déclarer les limites : « non testé », « Godot absent », « seulement parse-checké ». `NEVER` inventer un résultat. |
-| **R10** | `MUST` demander avant un changement d'architecture, de moteur ou de dépendance. M0 (projet Godot, dossiers, itch.io) est planifié, pas encore fait. |
+| **R9** | `MUST` déclarer les limites : « non testé », « non exécuté ici », « seulement parse-checké ». `NEVER` inventer un résultat. |
+| **R10** | `MUST` demander avant un changement d'architecture, de moteur ou de dépendance. M1 est implémenté localement ; la page itch.io et le test IA réel restent ouverts. |
 | **R11** | `MUST` sauvegarder en JSON avec un champ `version`. `NEVER` charger un `.tres` importé : un fichier ressource peut contenir du code. |
 | **R12** | `MUST` ordonner le prompt du plus stable au plus variable (règles → codex → résumé → état → action) pour le cache. Changer `dm-rules.md` invalide le cache et exige un retest. |
-| **R13** | `MUST` valider les CSV avec `balance_sim.py --check` après toute modification de données. |
+| **R13** | `MUST` valider les données avec `tools/content_check.py --check --langs fr,en` après toute modification de contenu. |
 | **R14** | `SHOULD` privilégier de petits changements ciblés. `NEVER` reformater massivement un fichier sans demande. |
 
 ## 3. Carte du dépôt
@@ -58,10 +59,13 @@
 | `examples/content/` | Modèles d'écriture, guide artiste, CSV | Modèles |
 | `examples/proxy/worker.ts` | Worker Cloudflare d'exemple | Non déployé, non testé |
 | `examples/tools/balance_sim.py` | Vérification CSV + simulation de combats | Fonctionnel |
-| `examples/ai-tests/` | Scénarios pièges, réponses Haiku, résultats | Test fait, corrections à appliquer |
-| `game/` | Projet Godot prévu | **Absent** |
+| `examples/ai-tests/` | Scénarios pièges, réponses Haiku, résultats | Référence ; réponses archivées recopiées dans `game/tests/fixtures/` |
+| `game/` | Projet Godot M1 : `core/`, `ai/`, `narration/`, `world/`, `ui/`, `content/`, `tests/` | **Vivant, 13 tests** |
+| `tools/` | `content_check.py` (validation M1) | Fonctionnel ; la simulation reste dans `examples/tools/` |
+| `tasks/` | `plan.md` (plan approuvé) et `todo.md` (suivi) | Vivant |
+| `docs/m1-ai-tests.md` | Rapport IA M1 et limites | Vivant |
+| `docs/m1-ac.md` | Checklist AC1–AC13 | Vivant |
 | `proxy/` | Déploiement du Worker prévu | **Absent** |
-| `tools/` | Outils Python de production prévus | **Absent** |
 | `reference/` | Ancien prototype web prévu | **Absent** |
 
 ## 4. État vérifié au 2026-10-19
@@ -70,32 +74,31 @@
 
 | Fait | Preuve / conséquence |
 |---|---|
-| Aucun code de jeu, aucune scène Godot | `game/` absent ; `examples/` est statique |
+| Le projet M1 existe et boote | `game/` ; `godot --headless --path game --quit` exit 0 |
 | Le remote GitHub existe (`origin`) | `git remote -v` |
-| `balance_sim.py --check` passe | `OK: data files look good` |
+| `content_check.py --check --langs fr,en` passe | `OK: content looks good (fr, en)` |
 | Python 3.14.7 disponible | `python3 --version` |
 | Node.js 26.8.1 disponible, pnpm absent | Le Worker n'est pas testé pour autant |
-| Godot absent de cet environnement | Ne pas prétendre avoir exécuté du GDScript ici |
-| Aucune suite de tests, aucun CI | Ne pas inventer `npm test`, `make test` ou équivalent |
+| Godot 4.7.2 installé | `godot --version` ; les commandes Godot sont exécutables |
+| 13 fichiers de tests, pas de CI | `PASS: 13 test file(s)` ; ne pas inventer `npm test` |
+| Le test IA réel n'a pas été rejoué | S1/S8 restent des défauts de narration ; voir `docs/m1-ai-tests.md` |
+| Page itch.io non créée | L'export macOS local existe, l'upload reste humain |
 | Questionnaire sans réponses | Plusieurs choix produit restent bloqués |
 
 ## 5. Commandes
 
 | But | Commande | Attendu |
 |---|---|---|
-| Vérifier les données | `python3 examples/tools/balance_sim.py --check` | `OK: data files look good`, sinon liste des problèmes |
-| Simuler des combats | `python3 examples/tools/balance_sim.py --fights 5000` | Tableau de dangerosité par monstre |
+| Boot headless | `godot --headless --path game --quit` | exit 0, pas d'erreur |
+| Tests | `godot --headless --path game --script res://tests/run_tests.gd` | `PASS: 13 test file(s)` |
+| Vérifier le contenu | `python3 tools/content_check.py --check --langs fr,en` | `OK: content looks good (fr, en)` |
+| Lancer le jeu | `godot --path game` | Fenêtre 1280 × 720 |
+| Simuler des combats (données d'exemple) | `python3 examples/tools/balance_sim.py --fights 5000` | Tableau de dangerosité |
+| Exporter macOS | `godot --headless --path game --export-release "macOS" "$PWD/builds/macos/BrasswakeReach.zip"` | Archive lançable |
 | Ouvrir les maquettes (macOS) | `open examples/interface/mockups.html` | Navigateur ; Windows : `start ...` |
 | Voir l'état Git | `git status --short` | Aucun fichier inattendu |
-| Voir l'historique | `git log --oneline` | Commits du projet |
 
-Si Godot est installé et qu'un projet existe :
-
-```bash
-godot --headless --path game --quit
-```
-
-Pour rejouer le test IA, la commande exacte est dans [examples/ai-tests/RESULTS.md](examples/ai-tests/RESULTS.md). Ne l'utiliser que si le projet et Godot existent.
+Pour rejouer le test IA, la commande exacte est dans [examples/ai-tests/RESULTS.md](examples/ai-tests/RESULTS.md). Le rapport M1 est dans [docs/m1-ai-tests.md](docs/m1-ai-tests.md).
 
 ## 6. Contrats
 
@@ -129,35 +132,39 @@ La passerelle gémit sous vos pas...
 
 ### 6.3 Contenu éditable
 
-Colonnes minimales vérifiées par `balance_sim.py` :
+Colonnes minimales vérifiées par `tools/content_check.py` :
 
 | Fichier | Colonnes |
 |---|---|
-| `monsters.csv` | `id`, `name`, `level`, `hp`, `ac`, `attack_bonus`, `damage`, `xp` |
-| `items.csv` | `id`, `name`, `type`, `price` |
-| `keywords.csv` | `effect`, `lang`, `words` |
+| `game/content/data/monsters.csv` | `id`, `level`, `hp`, `ac`, `attack_bonus`, `damage`, `xp` |
+| `game/content/data/items.csv` | `id`, `type`, `price` |
+| `game/content/data/locations.csv` | `id` |
+| `game/content/data/quests.csv` | `id`, `max_stage` |
+| `game/content/data/keywords.csv` | `effect`, `lang`, `words` |
+| `game/content/i18n/strings.csv` | `key`, `fr`, `en` |
 
+- Les noms affichés vivent dans `strings.csv` ; les CSV numériques restent neutres en langue.
 - Identifiants : `[a-z0-9_]+`, minuscules, sans espaces ni accents.
 - Noms de fichiers d'art : préfixes `tiles-`, `hero-`, `creature-`, `npc-`, `item-`, `fx-` (voir [GUIDE-ARTISTE.md](examples/content/art/GUIDE-ARTISTE.md)).
-- Modèles d'écriture : [pnj-modele.md](examples/content/writing/pnj-modele.md), [lieu-modele.md](examples/content/writing/lieu-modele.md).
 - Le code lit ces fichiers ; il ne les remplace pas par des constantes.
 
 ### 6.4 Prompt et modes IA
 
-Ordre stable → variable : `rules`, `codex`, `summary`, `state`, `action`.
+Ordre stable → variable : `rules`, `codex`, `summary`, `state`, `allowed`, `turn` (action + langue).
 
 - Le mode copier-coller est le défaut gratuit ; il doit rester intact.
+- `DM.play_turn()` construit le prompt, attend le collage, parse, puis retourne `{ok, narration, commands, changes, errors}`. C'est le shell qui affiche, applique et sauvegarde.
 - Le proxy ne reçoit que des données de jeu, jamais les règles ni un choix de modèle : le Worker décide.
 - La clé personnelle est stockée localement (`user://settings.cfg`), jamais livrée avec le jeu.
 - Préférer un résumé d'histoire glissant au transcript complet ; rafraîchir le résumé sur un petit modèle.
-- Toute modification de `dm-rules.md` doit être suivie d'un test des scénarios pièges.
+- Toute modification de `game/content/writing/dm-rules.md` doit être suivie d'un test des scénarios pièges.
 
 ### 6.5 Scène et interface
 
-- Structure de référence : [scene_tree.md](examples/godot/scene_tree.md).
-- Deux blocs : `World` (60 %) et `StoryPanel` (40 %) ; layout A côte à côte, B empilé, C plein écran.
-- Autoloads prévus : `Game`, `Content`, `DM`.
-- Le monde et le panneau doivent rester séparés ; l'UI ne contient pas de règles.
+- Scène réelle : `game/main.tscn`.
+- Deux blocs : `WorldView` (60 %) et `StoryPanel` (40 %) ; sous 900 px, `main.gd` les reparente dans `VSplitContainer` (`stack`).
+- Autoloads réels : `Game` (état/dés/sauvegarde), `Content` (données/langue), `DM` (prompt/collage/parseur).
+- `SceneDirector` reçoit uniquement des commandes validées. Le monde et le panneau restent séparés ; l'UI ne contient pas de règles.
 
 ## 7. Conventions de code
 
@@ -232,14 +239,14 @@ Ordre stable → variable : `rules`, `codex`, `summary`, `state`, `action`.
 
 | Sujet | Proposition actuelle | Bloqué par |
 |---|---|---|
-| Moteur | Godot 4 | Prototype M1 |
+| Moteur | Godot 4.7.2 | Playtest M1 puis décision |
 | Plateforme | itch.io (desktop, web possible) | Réponses question 1 |
-| Langue | À définir | Question 2 |
+| Langue | Jeu bilingue FR/EN dès M1 | Défaut actuel : locale système, sinon fr |
 | Combat | Tour par tour (proposé) | Question 6 |
-| Déplacements | Clic pour avancer (proposé pour démarrer) | Question 4 |
-| Rôle du MJ | Raconte, le jeu garde les règles | Question 7 |
-| Modèle IA | Sonnet 5.5 + résumé Haiku 5.5 | Test de jeu réel |
-| Style/tuiles | Pixel art, 16 ou 32 px | Questions 9–12 |
+| Déplacements | Clic pour avancer (implémenté) | Question 4 |
+| Rôle du MJ | Raconte, le jeu garde les règles (implémenté) | Question 7 |
+| Modèle IA | Sonnet 5.5 + résumé Haiku 5.5 | Test de jeu réel (AC11) |
+| Style/tuiles | Placeholders 32 × 32 | Questions 9–12 |
 
 Réponses à consigner dans [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md), puis à répercuter dans [docs/PLAN.md](docs/PLAN.md) et le README.
 
@@ -247,11 +254,14 @@ Réponses à consigner dans [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md)
 
 | Fichier | Risque |
 |---|---|
-| `examples/content/writing/dm-rules.md` | Partie cachée du prompt : change le comportement et le coût |
-| `examples/godot/ai/dm_reply_parser.gd` | Dernière barrière avant l'état du jeu |
-| `examples/godot/core/game_state.gd` | Toute forme d'état doit être migrée |
-| `examples/godot/core/save_system.gd` | Une erreur casse les parties existantes |
-| `examples/proxy/worker.ts` | Secret, abus, coût |
+| `game/content/writing/dm-rules.md` | Partie cachée du prompt : change le comportement et le coût |
+| `game/ai/dm_reply_parser.gd` | Dernière barrière avant l'état du jeu |
+| `game/core/game_state.gd` | Toute forme d'état doit être migrée |
+| `game/core/save_system.gd` | Une erreur casse les parties existantes |
+| `game/main.gd` | Orchestration du tour, sauvegarde/chargement, layout |
+| `game/world/scene_director.gd` | Applique les commandes IA au monde |
+| `game/content/i18n/strings.csv` | Toute clé doit exister en FR et EN |
+| `examples/proxy/worker.ts` | Secret, abus, coût (non déployé) |
 | `README.md` | Source de vérité de l'avancement |
 | `.gitignore` | Une omission peut commiter un secret |
 

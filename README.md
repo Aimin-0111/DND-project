@@ -2,8 +2,10 @@
 
 **Un RPG solo en pixel art, avec un Maître du Jeu IA.** Le récit occupe environ **40 %** de l'écran (texte avec des mots animés), le monde explorable **60 %**. Le jeu possède les règles, les dés et l'état ; l'IA narre et propose des actions limitées.
 
-> **État au 19 octobre 2026 : aucune version jouable.**
-> Le cadrage, le questionnaire d'équipe, les maquettes et des exemples de code existent. Le projet Godot reste à créer.
+> **État au 19 octobre 2026 : une version locale jouable de bout en bout.**
+> Le projet Godot `game/` contient la zone, le héros, le récit animé, la boucle IA copier-coller, la sauvegarde et le bilingue FR/EN. Il reste le test avec un vrai modèle, la page itch.io et la décision finale sur Godot.
+
+![Aperçu local M1](docs/screenshots/m1-shell.png)
 
 ---
 
@@ -36,15 +38,17 @@
 
 | ✅ Existe | ⬜ Manque |
 |---|---|
-| [Plan du projet](docs/PLAN.md) et [questionnaire d'équipe](docs/QUESTIONS-EQUIPE.md) (23 questions) | Les réponses du questionnaire |
-| [Maquettes HTML](examples/interface/mockups.html) : 3 mises en page, effets, panneaux, un tour de jeu | Un projet Godot, une scène, un personnage jouable |
-| Des exemples GDScript : dés, état, sauvegardes, parseur IA, prompts, déplacements, effets de texte | L'intégration de ces exemples dans un vrai projet |
+| [Plan du projet](docs/PLAN.md), [SPEC M1 approuvé](SPEC.md), [plan d'implémentation](tasks/plan.md) et [questionnaire](docs/QUESTIONS-EQUIPE.md) (23 questions) | Les réponses du questionnaire |
+| Jeu Godot `game/` : zone jouable, récit animé, boucle IA copier-coller, sauvegarde/chargement, FR/EN, 13 tests | Test IA avec le vrai modèle, page itch.io, perf, décision Godot |
+| Contenu M1 bilingue : données, `strings.csv`, lore FR/EN et 6 placeholders 32 × 32 | Le contenu final de l'artiste et du scénariste |
+| [Maquettes HTML](examples/interface/mockups.html) : 3 mises en page, effets, panneaux, un tour de jeu | Le design final et les retours de playtest |
+| Des exemples GDScript : dés, état, sauvegardes, parseur IA, prompts, déplacements, effets de texte | Le mode API/proxy (M2) |
 | Un [Worker Cloudflare](examples/proxy/worker.ts) d'exemple pour cacher la clé API | Un Worker déployé et testé |
 | Un [outil Python](examples/tools/balance_sim.py) de vérification des CSV et de simulation de combats | Son branchement au flux de travail |
 | Un [test d'hallucination](examples/ai-tests/RESULTS.md) : 8 scénarios pièges, 6/8 propres | Les corrections proposées, non appliquées |
 | Des guides et modèles pour [l'artiste](examples/content/art/GUIDE-ARTISTE.md) et [le scénariste](examples/content/writing/pnj-modele.md) | Du contenu réel (zone, PNJ, quêtes, lore) |
 
-> Les fichiers de `examples/` sont des **exemples statiques**, pas le jeu. Les scripts GDScript ont été parse-checkés sur la machine du lead (Godot 4.7.2) selon [examples/README.md](examples/README.md), mais aucun n'a été exécuté dans une vraie scène.
+> Les fichiers de `examples/` sont des **exemples statiques**, pas le jeu. Les exemples d'origine n'ont pas été exécutés ici ; le projet `game/` contient les versions adaptées et testées. La capture [m1-shell.png](docs/screenshots/m1-shell.png) montre l'état local.
 
 ---
 
@@ -55,22 +59,23 @@ Légende : ✅ fait · 🟡 partiel · ⬜ pas commencé.
 | Jalon | État | Ce qui est acquis | Ce qui bloque la suite |
 |---|---|---|---|
 | **Cadrage** | 🟡 | Vision 40/60, plan, questionnaire, étude de coût IA | Réponses de l'équipe, choix définitifs |
-| **M0 — Mise en place** | 🟡 | Dépôt Git/GitHub, docs, exemples, guides | Projet Godot, dossiers OneDrive, page itch.io |
-| **M1 — Prototype (décision)** | ⬜ | Rien de jouable | Toute la chaîne : zone, héros, texte, IA, build |
+| **M0 — Mise en place** | 🟡 | Dépôt Git/GitHub, docs, exemples, guides, projet Godot `game/` (T1), export macOS local (T2) | Dossiers OneDrive, page itch.io |
+| **M1 — Prototype (décision)** | 🟡 | Tranche locale complète : zone, récit animé, boucle IA, sauvegarde/chargement, FR/EN, 13 tests, export macOS (T1–T17) | Test avec le vrai modèle (AC11), page itch.io privée (AC12), perf, décision Godot |
 | **M2 — Systèmes cœur** | ⬜ | Des exemples de code non intégrés | Intégration, tests, sauvegardes, proxy |
 | **M3 — Monde** | ⬜ | Rien | Zones, PNJ, combat, temps, météo |
 | **M4 — Contenu** | ⬜ | Modèles et CSV d'exemple | Art et écriture réels, équilibrage |
 | **M5 — Sortie** | ⬜ | Rien | Son, réglages, tutoriel, page publique |
 
-**Avancement des cases : 14 / 66 (21 %)** — comptage simple des cases du TODO, pas une estimation du temps de travail.
+**Avancement des cases : 21 / 68 (31 %)** — comptage simple des cases du TODO, pas une estimation du temps de travail. Le détail d'implémentation est dans [tasks/todo.md](tasks/todo.md).
 
 ---
 
 ## Prochaines actions
 
-1. **Obtenir les réponses au [questionnaire](docs/QUESTIONS-EQUIPE.md)** — il débloque la langue, la plateforme, le style, les combats et le rôle du MJ IA. Sans elles, l'artiste et le scénariste ne peuvent pas vraiment démarrer.
-2. **Créer le squelette M0** — projet Godot `game/`, dossiers OneDrive `art/`, `writing/`, `data/`, page itch.io privée. C'est le prochain vrai jalon.
-3. **Appliquer les deux corrections du test IA** — ajouter les règles anti-hallucination et anti-dérive dans [dm-rules.md](examples/content/writing/dm-rules.md), puis relancer S1 et S8 plusieurs fois.
+1. **Rejouer S1, S6 et S8 avec le vrai prompt M1** — 5 à 10 fois chacun, avec le modèle choisi. Les règles anti-invention et `move_to` sont déjà dans [dm-rules.md](game/content/writing/dm-rules.md) ; il faut vérifier qu'elles tiennent.
+2. **Créer la page itch.io privée** — l'export macOS local fonctionne ; il reste le téléversement et l'accès équipe.
+3. **Obtenir les réponses au [questionnaire](docs/QUESTIONS-EQUIPE.md)** — il débloque le style, les combats et le rôle du MJ IA. Sans elles, l'artiste et le scénariste ne peuvent pas vraiment démarrer.
+4. **Décider Godot vs Phaser** après un playtest de la build M1, puis fermer M1.
 
 ---
 
@@ -95,7 +100,7 @@ Légende : ✅ fait · 🟡 partiel · ⬜ pas commencé.
 - [x] Ajouter un `.gitignore` (cache Godot, builds, secrets, Node)
 - [x] Écrire le plan, le questionnaire et les exemples statiques
 - [x] Écrire les guides de l'artiste et du scénariste
-- [ ] Créer le projet Godot `game/` (il n'existe pas encore)
+- [x] Créer le projet Godot `game/` (T1 : boot, autoloads et runner vérifiés)
 - [ ] Partager les dossiers OneDrive `art/`, `writing/`, `data/`
 - [ ] Créer une page itch.io privée pour les builds de test
 - [ ] Installer GitHub Desktop et l'extension VS Code `godot-tools` (`butler` viendra plus tard)
@@ -104,14 +109,14 @@ Légende : ✅ fait · 🟡 partiel · ⬜ pas commencé.
 
 ### 3. M1 — Prototype de décision
 
-- [ ] Construire une petite zone : forêt, chemin, rivière, pont, vieux moulin
-- [ ] Faire marcher le héros (cliquer pour aller, caméra qui suit)
-- [ ] Réaliser la répartition 40/60, avec bascule empilée sur écran étroit
-- [ ] Ajouter l'effet machine à écrire et **3 mots animés**
-- [ ] Brancher un tour IA complet en mode copier-coller
-- [ ] Appliquer au moins une commande IA vérifiée (`move_to`, `spawn` ou `weather`)
-- [ ] Sauvegarder et recharger une partie simple
-- [ ] Exporter le prototype sur la page itch.io privée
+- [x] Construire une petite zone : forêt, chemin, rivière, pont, vieux moulin (T8)
+- [x] Faire marcher le héros (cliquer pour aller, caméra qui suit) (T8)
+- [x] Réaliser la répartition 40/60, avec bascule empilée sur écran étroit (T9, T17)
+- [x] Ajouter l'effet machine à écrire et **3 mots animés** (T10, T11)
+- [ ] Brancher un tour IA complet en mode copier-coller (UI et boucle faites ; test avec Claude réel restant)
+- [ ] Appliquer au moins une commande IA vérifiée (`move_to`, `spawn` ou `weather`) (fait avec une réponse simulée, pas encore avec le vrai modèle)
+- [x] Sauvegarder et recharger une partie simple (T15)
+- [ ] Exporter le prototype sur la page itch.io privée (export local OK, page à créer)
 - [ ] Mesurer les performances (fluidité, temps d'attente IA)
 - [ ] Décider : **on garde Godot** ou **on passe à Phaser**
 
@@ -168,6 +173,8 @@ Légende : ✅ fait · 🟡 partiel · ⬜ pas commencé.
 - [x] Écrire [examples/README.md](examples/README.md)
 - [x] Écrire ce README avec le TODO
 - [x] Écrire [AGENTS.md](AGENTS.md), la référence opérationnelle des agents
+- [x] Rédiger [SPEC.md](SPEC.md) pour la tranche verticale M1
+- [x] Faire approuver [SPEC.md](SPEC.md) par l'équipe
 - [ ] Mettre à jour le plan quand les réponses de l'équipe arrivent
 - [ ] Tenir le journal ci-dessous à chaque session
 
@@ -175,7 +182,7 @@ Légende : ✅ fait · 🟡 partiel · ⬜ pas commencé.
 
 ## Démarrage rapide
 
-Aucune installation n'est nécessaire pour lire les maquettes. Le jeu, lui, n'existe pas encore.
+Les maquettes s'ouvrent sans installation. Le projet Godot requiert **Godot 4.7.2** ; à ce stade, il n'affiche qu'un écran de bootstrap, pas encore une zone jouable.
 
 ```bash
 # Vérifier les fichiers de données (colonnes, identifiants, dés)
@@ -186,11 +193,17 @@ python3 examples/tools/balance_sim.py --fights 5000
 
 # Ouvrir les maquettes (macOS)
 open examples/interface/mockups.html
+
+# Lancer le projet Godot (Godot 4.7.2 requis)
+godot --path game
+
+# Lancer les tests headless
+godot --headless --path game --script res://tests/run_tests.gd
 ```
 
 Sous Windows, remplacer `open` par `start`. Les maquettes s'ouvrent aussi par double-clic.
 
-**Ce qui est vérifié au 19 octobre 2026 :** la commande `--check` passe (`OK: data files look good`). Godot n'est pas installé sur la machine courante, donc le GDScript n'a pas été réexécuté ici. Node.js est disponible, mais le Worker n'a pas été testé.
+**Ce qui est vérifié au 19 octobre 2026 :** `content_check.py --check --langs fr,en` passe. Godot 4.7.2 est installé ; le boot headless et les **13 fichiers de tests** passent. L'export macOS (57 Mo) a été généré et lancé en headless (`builds/macos/BrasswakeReach.zip`). Le rapport IA est dans [docs/m1-ai-tests.md](docs/m1-ai-tests.md), la checklist dans [docs/m1-ac.md](docs/m1-ac.md). Node.js est disponible, mais le Worker n'a pas été testé.
 
 ---
 
@@ -199,11 +212,20 @@ Sous Windows, remplacer `open` par `start`. Les maquettes s'ouvrent aussi par do
 ```text
 .
 ├─ README.md              ← ce fichier : vision + avancement
+├─ SPEC.md                ← spécification de la tranche M1
 ├─ AGENTS.md              ← référence compacte pour les agents
 ├─ CLAUDE.md              ← brief historique (contexte, ancienne archi web)
+├─ tasks/
+│  ├─ plan.md             ← plan d'implémentation M1 approuvé
+│  └─ todo.md             ← suivi des tâches M1
 ├─ docs/
 │  ├─ PLAN.md             ← plan, jalons, choix proposés
-│  └─ QUESTIONS-EQUIPE.md ← 23 questions à l'équipe (français)
+│  ├─ QUESTIONS-EQUIPE.md ← 23 questions à l'équipe (français)
+│  ├─ m1-ai-tests.md      ← rapport de test IA M1
+│  ├─ m1-ac.md            ← checklist AC1–AC13
+│  └─ screenshots/        ← captures du jeu
+├─ game/                  ← projet Godot M1 (zone, IA, sauvegarde, tests)
+├─ tools/                 ← content_check.py (validation du contenu M1)
 └─ examples/
    ├─ README.md           ← guide des exemples statiques
    ├─ interface/          ← maquettes HTML
@@ -214,7 +236,7 @@ Sous Windows, remplacer `open` par `start`. Les maquettes s'ouvrent aussi par do
    └─ ai-tests/           ← scénarios pièges et résultats
 ```
 
-Dossiers prévus par le plan mais **absents** aujourd'hui : `game/` (projet Godot), `proxy/` (déploiement), `tools/` (outils de production), `reference/` (ancien prototype).
+Dossiers prévus par le plan mais **absents** aujourd'hui : `proxy/` (déploiement), `reference/` (ancien prototype). `game/` et `tools/` existent depuis T1/T3.
 
 ---
 
@@ -233,7 +255,7 @@ Dossiers prévus par le plan mais **absents** aujourd'hui : `game/` (projet Godo
 
 - **17 octobre 2026** — Plan du projet, questionnaire d'équipe, exemples statiques, guides artiste/scénariste.
 - **18 octobre 2026** — Test d'hallucination sur Haiku : 8 scénarios, 6/8 propres, 1 fait inventé, 1 dérive récit/état.
-- **19 octobre 2026** — Ajout du README avec TODO et de `AGENTS.md`. Vérification Python des données : OK. Aucun code de jeu ajouté.
+- **19 octobre 2026** — Rédaction de [SPEC.md](SPEC.md) et du [plan M1](tasks/plan.md), approbation. T1–T17 : projet Godot, contenu M1 bilingue, placeholders, loader/localisation, cœur état/dés/sauvegarde, zone jouable, récit animé, boucle IA copier-coller, commandes, sauvegarde/chargement et FR/EN. 13 tests verts, capture dans [docs/screenshots/m1-shell.png](docs/screenshots/m1-shell.png), export macOS lancé. Restent AC11 (test IA réel) et AC12 (page itch.io).
 
 ---
 
@@ -241,6 +263,11 @@ Dossiers prévus par le plan mais **absents** aujourd'hui : `game/` (projet Godo
 
 | Document | À quoi il sert |
 |---|---|
+| [SPEC.md](SPEC.md) | Spécification approuvée de la tranche verticale M1 |
+| [tasks/plan.md](tasks/plan.md) | Plan d'implémentation M1 approuvé |
+| [tasks/todo.md](tasks/todo.md) | Suivi détaillé des tâches M1 |
+| [docs/m1-ai-tests.md](docs/m1-ai-tests.md) | Rapport de test IA M1 et limites |
+| [docs/m1-ac.md](docs/m1-ac.md) | Checklist AC1–AC13 de fin de M1 |
 | [docs/PLAN.md](docs/PLAN.md) | Vision, décisions, jalons, rôles, dossiers |
 | [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md) | Les 23 questions à trancher en équipe |
 | [examples/README.md](examples/README.md) | Carte des exemples et options comparées |
