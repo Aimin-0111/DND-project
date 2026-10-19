@@ -41,7 +41,7 @@ These are account, install or key actions. The agent prepares everything else an
 | Tasks 2, 17 | Type your own API key into the game at runtime (never into a file) |
 | Task 20 | Approve the download of a free CC0 placeholder art pack (Kenney) |
 | Tasks 16, 25 | Measure on a school laptop (or use Chrome's 4× CPU slowdown as a stand-in) |
-| Before Alban pushes | Add Alban as a collaborator on the GitHub repo, and agree on how Alban works (Q-7) |
+| Before Alban takes a task | Agree with Alban on how changes reach `main` and which track Alban takes (Q-7). Alban can already push to the repo |
 | Every task | Approve the commit (and push) |
 
 ## Dependency graph
