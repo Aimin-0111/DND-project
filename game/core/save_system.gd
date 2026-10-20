@@ -63,7 +63,7 @@ static func migrate(data: Dictionary) -> Dictionary:
 				return {}
 		version += 1
 		data["version"] = version
-	return data
+	return GameState.fill_defaults(data)
 
 
 static func _valid_slot(slot: String) -> bool:

@@ -17,8 +17,9 @@ func _ready() -> void:
 	adapter.status_changed.connect(func(message: String) -> void: status_changed.emit(message))
 
 
-## Returns {ok, narration, commands, changes, errors}. A failed turn carries no
-## commands and no changes, so the caller can leave the state untouched.
+## Returns {ok, narration, commands, changes, errors}. Only an empty reply
+## is a failed turn. Otherwise bad commands and changes are dropped one by one
+## and listed in errors (the debug log); the rest still applies.
 func play_turn(action: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": ["A turn is already running."]}
@@ -37,20 +38,14 @@ func play_turn(action: String) -> Dictionary:
 	if reply.strip_edges().is_empty():
 		return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": ["Cancelled."]}
 	var parsed := DmReplyParser.parse(reply, Game.allowed_ids())
-	if not parsed["errors"].is_empty():
-		return {
-			"ok": false,
-			"narration": parsed["narration"],
-			"commands": [],
-			"changes": {},
-			"errors": parsed["errors"],
-		}
+	for error in parsed["errors"]:
+		push_warning("DM reply: %s" % str(error))
 	return {
 		"ok": true,
 		"narration": parsed["narration"],
 		"commands": parsed["commands"],
 		"changes": parsed["state"],
-		"errors": [],
+		"errors": parsed["errors"],
 	}
 
 

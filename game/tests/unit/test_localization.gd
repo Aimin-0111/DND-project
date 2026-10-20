@@ -23,6 +23,10 @@ func run() -> Array:
 		failures.append("allowed items missing rusty_sword")
 	if not "the_silent_mill" in ids.get("quests", []):
 		failures.append("allowed quests missing the_silent_mill")
+	if ids.get("npcs", []) != ["oda"]:
+		failures.append("allowed npcs should be [oda], got %s" % str(ids.get("npcs")))
+	if Content.t_in("ui.act", "fr") != "Agir" or Content.t_in("ui.act", "en") != "Act":
+		failures.append("t_in should read the given language")
 
 	if Content.codex_text().is_empty():
 		failures.append("codex is empty")

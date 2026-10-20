@@ -37,4 +37,25 @@ func run() -> Array:
 	if ai_tagged.count("[/burn]") != 2:
 		failures.append("option C produced unbalanced burn tags: %s" % ai_tagged)
 
+	var plain := KeywordTagger.new()
+	var five := plain.tag_option_a("[holy]a[/holy] [holy]b[/holy] [holy]c[/holy] [holy]d[/holy] [holy]e[/holy]")
+	if five.count("[holy]") != 4 or not " e" in five:
+		failures.append("only the first 4 AI tags should be kept, the 5th word stays: %s" % five)
+
+	var long_tag := plain.tag_option_a("[burn]%s[/burn]" % "x".repeat(40))
+	if "[burn]" in long_tag or not "x".repeat(40) in long_tag:
+		failures.append("a tag around 40 characters should be removed, its text kept: %s" % long_tag)
+
+	var nested := plain.tag_option_a("[burn]a [freeze]b[/freeze] c[/burn]")
+	if "[burn]" in nested or "[freeze]" in nested:
+		failures.append("nested tags should show as plain text: %s" % nested)
+
+	var unclosed := plain.tag_option_a("[burn]fire and more")
+	if "[burn]" in unclosed:
+		failures.append("an unclosed tag should show as plain text: %s" % unclosed)
+
+	var many := english.tag_option_c("fire fire fire fire fire fire fire fire fire fire")
+	if many.count("[burn]") != 6:
+		failures.append("at most 6 words should animate per entry: %s" % many)
+
 	return failures

@@ -78,17 +78,11 @@ func _physics_process(_delta: float) -> void:
 
 
 func _animate(direction: Vector2) -> void:
-	if direction == Vector2.ZERO:
-		var idle := "idle_" + _facing
-		if not sprite.sprite_frames.has_animation(idle):
-			idle = "idle_down"
-		sprite.play(idle)
-		return
-	if absf(direction.x) > absf(direction.y):
-		_facing = "right" if direction.x > 0.0 else "left"
-	else:
-		_facing = "down" if direction.y > 0.0 else "up"
-	sprite.play("walk_" + _facing)
+	var choice := HeroFacing.pick(direction, _facing, sprite.sprite_frames.get_animation_names())
+	_facing = choice["facing"]
+	sprite.flip_h = choice["flip_h"]
+	if sprite.animation != choice["animation"] or not sprite.is_playing():
+		sprite.play(choice["animation"])
 
 
 func _build_frames() -> void:

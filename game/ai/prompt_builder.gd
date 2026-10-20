@@ -12,6 +12,8 @@ static func build(state: Dictionary, action: String, rules: String, codex: Strin
 		"pack": state["pack"],
 		"quests": state["quests"],
 		"location": state["location"],
+		"weather": state.get("weather", "clear"),
+		"creatures": state.get("creatures", []),
 		"time": _clock(int(state["time_minutes"])),
 	}
 	return {
@@ -20,6 +22,7 @@ static func build(state: Dictionary, action: String, rules: String, codex: Strin
 		"summary": str(state.get("story_summary", "")),
 		"state": visible_state,
 		"allowed": allowed,
+		"last_roll": state.get("last_roll"),
 		"turn": {"language": language, "action": action.strip_edges()},
 	}
 
@@ -32,8 +35,16 @@ static func to_single_text(prompt: Dictionary) -> String:
 		"=== STORY SO FAR ===\n" + str(prompt.get("summary", "")),
 		"=== STATE ===\n" + JSON.stringify(prompt["state"], "\t"),
 		"=== ALLOWED IDS ===\n" + JSON.stringify(prompt["allowed"], "\t"),
+		"=== LAST ROLL ===\n" + _roll_text(prompt.get("last_roll")),
 		"=== TURN INPUT ===\n" + JSON.stringify(prompt["turn"], "\t"),
 	])
+
+
+## The game rolled it last turn; the AI narrates the outcome, never rerolls.
+static func _roll_text(roll: Variant) -> String:
+	if not (roll is Dictionary):
+		return "none"
+	return JSON.stringify(roll, "\t")
 
 
 static func _clock(minutes: int) -> String:

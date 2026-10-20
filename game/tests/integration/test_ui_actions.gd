@@ -1,5 +1,8 @@
 extends RefCounted
-## UI-level save/load, language toggle and responsive reparenting.
+## UI-level save/load, first-launch language, language toggle and
+## responsive reparenting.
+
+const TEST_SETTINGS := "user://__test_settings.cfg"
 
 
 func run() -> Array:
@@ -8,10 +11,26 @@ func run() -> Array:
 	if tree == null:
 		return ["no SceneTree available"]
 
-	var main = load("res://main.tscn").instantiate()
-	tree.root.add_child(main)
 	var game = tree.root.get_node("Game")
 	var content = tree.root.get_node("Content")
+	var real_settings: String = content.settings_path
+	content.settings_path = TEST_SETTINGS
+	DirAccess.remove_absolute(TEST_SETTINGS)
+	var main = load("res://main.tscn").instantiate()
+	tree.root.add_child(main)
+
+	var picker = main.get_node_or_null("DialogLayer/LanguagePicker")
+	if picker == null:
+		failures.append("first launch should ask for the language")
+	else:
+		var start_language: String = content.language()
+		var other := "en" if start_language == "fr" else "fr"
+		picker.find_child(other, true, false).pressed.emit()
+		if content.language() != other or not content.has_language_choice():
+			failures.append("picking a language should apply and remember it")
+		main._on_language_requested()
+		if content.language() != start_language:
+			failures.append("toggling back should restore the start language")
 
 	var language_before: String = content.language()
 	main._on_language_requested()
@@ -45,4 +64,6 @@ func run() -> Array:
 
 	tree.root.remove_child(main)
 	main.free()
+	DirAccess.remove_absolute(TEST_SETTINGS)
+	content.settings_path = real_settings
 	return failures

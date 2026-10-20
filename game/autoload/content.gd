@@ -11,6 +11,9 @@ const STRINGS_PATH := "res://content/i18n/strings.csv"
 const RULES_PATH := "res://content/writing/dm-rules.md"
 const TABLES := ["monsters", "items", "locations", "quests", "keywords"]
 
+## Device settings, never in a save. Tests point this elsewhere.
+var settings_path := "user://settings.cfg"
+
 var _language := "fr"
 var _strings: Dictionary = {}
 var _tables: Dictionary = {}
@@ -63,16 +66,34 @@ func _apply_language(lang: String) -> void:
 
 ## Visible text for a key. Missing keys return the key and warn.
 func t(key: String) -> String:
+	return t_in(key, language())
+
+
+## Same, in a given language (the first-launch picker shows both).
+func t_in(key: String, lang: String) -> String:
 	_ensure_loaded()
 	var entry: Variant = _strings.get(key)
 	if not (entry is Dictionary):
 		push_warning("Content: missing key '%s'" % key)
 		return key
-	var value := str(entry.get(_language, ""))
+	var value := str(entry.get(lang, ""))
 	if value.is_empty():
-		push_warning("Content: missing %s for '%s'" % [_language, key])
+		push_warning("Content: missing %s for '%s'" % [lang, key])
 		return key
 	return value
+
+
+## True once the player picked a language (first launch asks).
+func has_language_choice() -> bool:
+	var settings := ConfigFile.new()
+	return settings.load(settings_path) == OK and settings.has_section_key("general", "language")
+
+
+func remember_language() -> void:
+	var settings := ConfigFile.new()
+	settings.load(settings_path)
+	settings.set_value("general", "language", language())
+	settings.save(settings_path)
 
 
 func table(name: String) -> Array:
@@ -94,6 +115,7 @@ func allowed_ids() -> Dictionary:
 		"creatures": _ids("monsters"),
 		"items": _ids("items"),
 		"quests": _ids("quests"),
+		"npcs": _npc_ids(),
 	}
 
 
@@ -121,6 +143,20 @@ func _ids(table_name: String) -> Array:
 	return out
 
 
+## Writing entries carry an "- **Id** : <id>" line. Ids that aren't places
+## are characters: the allowed "who" of an emote.
+func _npc_ids() -> Array:
+	var re := RegEx.new()
+	re.compile("\\*\\*(?:Id|Identifiant)\\*\\*\\s*:\\s*([a-z0-9_]+)")
+	var places := _ids("locations")
+	var out: Array = []
+	for match in re.search_all(codex_text()):
+		var id := match.get_string(1)
+		if not id in places and not id in out:
+			out.append(id)
+	return out
+
+
 func _load_codex(lang: String) -> PackedStringArray:
 	var entries := PackedStringArray()
 	var folder := WRITING_DIR + lang + "/"
@@ -144,5 +180,11 @@ func _read_text(path: String) -> String:
 	return file.get_as_text()
 
 
+## The saved choice, else the system language, else English.
 func _default_language() -> String:
-	return "en" if OS.get_locale_language() == "en" else "fr"
+	var settings := ConfigFile.new()
+	if settings.load(settings_path) == OK:
+		var saved := str(settings.get_value("general", "language", ""))
+		if saved in LANGUAGES:
+			return saved
+	return "fr" if OS.get_locale_language() == "fr" else "en"

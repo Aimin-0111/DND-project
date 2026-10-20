@@ -24,6 +24,7 @@ func run() -> Array:
 		"=== STORY SO FAR ===",
 		"=== STATE ===",
 		"=== ALLOWED IDS ===",
+		"=== LAST ROLL ===",
 		"=== TURN INPUT ===",
 	]
 	var previous := -1
@@ -46,5 +47,16 @@ func run() -> Array:
 		failures.append("allowed skills must be visible to the AI")
 	if not "RULES-MARKER" in str(prompt["rules"]):
 		failures.append("rules were not passed through")
+	if not '"weather": "clear"' in text or not '"creatures"' in text:
+		failures.append("weather and creatures must be in STATE")
+	for secret in ['"seed"', '"rng_state"', '"log"']:
+		if secret in text:
+			failures.append("%s must never be sent" % secret)
+
+	state["last_roll"] = {"skill": "Stealth", "dc": 13, "d20": 4, "modifier": 5, "total": 9, "success": false}
+	var with_roll := PromptBuilder.to_single_text(PromptBuilder.build(state, "Je me cache.", "R", "C", allowed, "fr"))
+	var roll_at := with_roll.find("=== LAST ROLL ===")
+	if with_roll.find('"total": 9', roll_at) == -1:
+		failures.append("the last roll result must reach the next prompt")
 
 	return failures

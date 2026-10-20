@@ -13,6 +13,7 @@ const TEST_PATHS := [
 	"res://tests/unit/test_game_state.gd",
 	"res://tests/unit/test_save_system.gd",
 	"res://tests/unit/test_walk_grid.gd",
+	"res://tests/unit/test_hero_facing.gd",
 	"res://tests/unit/test_keyword_tagger.gd",
 	"res://tests/unit/test_prompt_builder.gd",
 	"res://tests/unit/test_dm_reply_parser.gd",

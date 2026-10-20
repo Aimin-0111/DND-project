@@ -5,6 +5,9 @@ extends RefCounted
 ## words from keywords.csv. Any other BBCode is escaped and shown as text.
 
 const EFFECTS := ["burn", "freeze", "shock", "poison", "whisper", "holy"]
+const MAX_AI_TAGS := 4
+const MAX_TAG_TEXT := 30
+const MAX_ANIMATED := 6
 
 var words: Dictionary = {}
 var _word_regex: RegEx
@@ -54,22 +57,45 @@ func _escape_bbcode(text: String) -> String:
 	return text.replace("[", "[lb]")
 
 
+## Works on escaped text. Only a well-formed pair with nothing nested becomes
+## a real tag; the first MAX_AI_TAGS pairs of at most MAX_TAG_TEXT characters
+## are kept, later or longer ones lose their tags but keep their words.
+## Unclosed or nested tags stay plain text.
 func _allow_effect_tags(text: String) -> String:
-	for effect in EFFECTS:
-		text = text.replace("[lb]%s]" % effect, "[%s]" % effect)
-		text = text.replace("[lb]/%s]" % effect, "[/%s]" % effect)
-	return text
+	var pairs := RegEx.new()
+	pairs.compile("(?s)\\[lb\\](" + "|".join(EFFECTS) + ")\\](.*?)\\[lb\\]/\\1\\]")
+	var out := ""
+	var last := 0
+	var kept := 0
+	for match in pairs.search_all(text):
+		var effect := match.get_string(1)
+		var inner := match.get_string(2)
+		out += text.substr(last, match.get_start() - last)
+		if inner.contains("[lb]"):
+			out += match.get_string()
+		elif kept < MAX_AI_TAGS and inner.length() <= MAX_TAG_TEXT:
+			out += "[%s]%s[/%s]" % [effect, inner, effect]
+			kept += 1
+		else:
+			out += inner
+		last = match.get_end()
+	return out + text.substr(last)
 
 
+## Tags list words the AI didn't tag, until MAX_ANIMATED words animate.
 func _apply_word_list(text: String) -> String:
 	if _word_regex == null or words.is_empty():
 		return text
 	var protected := _tagged_ranges(text)
+	var animated := protected.size()
 	var out := ""
 	var last := 0
 	for match in _word_regex.search_all(text):
+		if animated >= MAX_ANIMATED:
+			break
 		if _inside(match.get_start(), protected):
 			continue
+		animated += 1
 		var word := match.get_string()
 		var effect: String = words[word.to_lower()]
 		out += text.substr(last, match.get_start() - last)

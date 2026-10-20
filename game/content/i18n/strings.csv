@@ -38,3 +38,8 @@ ui.spawned,Apparu,Spawned
 ui.despawned,Retiré,Despawned
 ui.weather,Météo,Weather
 ui.emote,Émotion,Emote
+ui.roll_success,Réussite,Success
+ui.roll_failure,Échec,Failure
+ui.dc,DD,DC
+ui.choose_language,Choisis ta langue,Choose your language
+ui.language_name,Français,English

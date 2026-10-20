@@ -21,6 +21,8 @@ const LIMITS := {
 	"gold_delta": Vector2i(-200, 200),
 	"time_advance_minutes": Vector2i(0, 24 * 60),
 }
+const MAX_ADD_ITEMS := 3
+const CHANGE_KEYS := ["hp_delta", "gold_delta", "time_advance_minutes", "add_items", "quest_updates"]
 
 
 ## Returns {"narration": String, "commands": Array, "state": Dictionary, "errors": Array}
@@ -86,15 +88,22 @@ static func _check_command(command: Variant, allowed: Dictionary) -> String:
 				return "spawn: unknown creature '%s'" % command["creature"]
 			if not command["near"] in allowed.get("locations", []):
 				return "spawn: unknown place '%s'" % command["near"]
+		"despawn":
+			if not command["creature"] in allowed.get("creatures", []):
+				return "despawn: unknown creature '%s'" % command["creature"]
 		"weather":
 			if not command["kind"] in WEATHER:
 				return "weather: unknown kind '%s'" % command["kind"]
 		"emote":
+			if command["who"] != "hero" and not command["who"] in allowed.get("npcs", []):
+				return "emote: unknown character '%s'" % command["who"]
 			if not command["emote"] in EMOTES:
 				return "emote: unknown emote '%s'" % command["emote"]
 		"request_roll":
 			if not command["skill"] in allowed.get("skills", []):
 				return "request_roll: unknown skill '%s'" % command["skill"]
+			if command["dc"] != floorf(command["dc"]):
+				return "request_roll: DC must be a whole number"
 			if command["dc"] < 5.0 or command["dc"] > 30.0:
 				return "request_roll: DC must be between 5 and 30"
 	return ""
@@ -102,28 +111,38 @@ static func _check_command(command: Variant, allowed: Dictionary) -> String:
 
 static func _check_changes(changes: Dictionary, allowed: Dictionary, errors: Array) -> Dictionary:
 	var ok := {}
+	for key in changes:
+		if not key in CHANGE_KEYS:
+			errors.append("state: unknown key '%s' ignored." % str(key))
 	for key in LIMITS:
-		if changes.has(key) and typeof(changes[key]) == TYPE_FLOAT:
-			var limits: Vector2i = LIMITS[key]
-			var value := int(changes[key])
-			if value < limits.x or value > limits.y:
-				errors.append("%s = %d is out of range, clamped." % [key, value])
-			ok[key] = clampi(value, limits.x, limits.y)
+		if not changes.has(key):
+			continue
+		if typeof(changes[key]) != TYPE_FLOAT:
+			errors.append("%s must be a number." % key)
+			continue
+		var limits: Vector2i = LIMITS[key]
+		var value := int(changes[key])
+		if value < limits.x or value > limits.y:
+			errors.append("%s = %d is out of range, clamped." % [key, value])
+		ok[key] = clampi(value, limits.x, limits.y)
+
 	var items: Array = []
-	for item_id in changes.get("add_items", []):
-		if item_id in allowed.get("items", []):
-			items.append(item_id)
-		else:
+	for item_id in _list(changes, "add_items", errors):
+		if not item_id in allowed.get("items", []):
 			errors.append("add_items: unknown item '%s'" % str(item_id))
+		elif items.size() >= MAX_ADD_ITEMS:
+			errors.append("add_items: more than %d items, '%s' dropped." % [MAX_ADD_ITEMS, item_id])
+		else:
+			items.append(item_id)
 	if not items.is_empty():
 		ok["add_items"] = items
+
 	var quests: Array = []
-	for quest in changes.get("quest_updates", []):
-		if quest is Dictionary and quest.get("id") in allowed.get("quests", []) \
-				and typeof(quest.get("stage")) == TYPE_FLOAT:
+	for quest in _list(changes, "quest_updates", errors):
+		if _valid_quest_update(quest, allowed):
 			quests.append({
 				"id": quest["id"],
-				"stage": maxi(0, int(quest["stage"])),
+				"stage": int(quest["stage"]),
 				"done": quest.get("done") == true,
 			})
 		else:
@@ -131,3 +150,22 @@ static func _check_changes(changes: Dictionary, allowed: Dictionary, errors: Arr
 	if not quests.is_empty():
 		ok["quest_updates"] = quests
 	return ok
+
+
+## A missing list is fine; null, a number or text instead of a list is noted.
+static func _list(changes: Dictionary, key: String, errors: Array) -> Array:
+	if not changes.has(key):
+		return []
+	if changes[key] is Array:
+		return changes[key]
+	errors.append("%s must be a list." % key)
+	return []
+
+
+static func _valid_quest_update(quest: Variant, allowed: Dictionary) -> bool:
+	if not (quest is Dictionary) or not quest.get("id") in allowed.get("quests", []):
+		return false
+	var stage: Variant = quest.get("stage")
+	if typeof(stage) != TYPE_FLOAT or stage < 0.0 or stage != floorf(stage):
+		return false
+	return not quest.has("done") or typeof(quest["done"]) == TYPE_BOOL

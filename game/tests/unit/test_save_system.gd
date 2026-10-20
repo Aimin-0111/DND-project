@@ -37,5 +37,20 @@ func run() -> Array:
 	if SaveSystem.save_game(state, "../evil") != ERR_INVALID_PARAMETER:
 		failures.append("path traversal slot should be rejected")
 
+	# A Beta-0.1 save (version 1, before weather/creatures/last_roll) still loads.
+	var old := GameState.new_game(1234)
+	for key in ["weather", "creatures", "last_roll"]:
+		old.erase(key)
+	var migrated := SaveSystem.import_save_text(JSON.stringify(old))
+	if migrated.get("weather") != "clear" or migrated.get("creatures") != [] or not migrated.has("last_roll"):
+		failures.append("a Beta-0.1 save should get the new fields: %s" % str(migrated.keys()))
+
+	state["creatures"] = [{"id": "rust_wolf", "near": "mill_bridge"}]
+	state["weather"] = "rain"
+	if SaveSystem.save_game(state, SLOT) == OK:
+		var loaded := SaveSystem.load_game(SLOT)
+		if loaded.get("creatures", []).size() != 1 or loaded.get("weather") != "rain":
+			failures.append("creatures and weather should survive save/load")
+
 	SaveSystem.delete_save(SLOT)
 	return failures

@@ -18,6 +18,12 @@ keys and command names in English.
   never describe it as real.
 - Whenever the story moves the hero to a listed place, include a `move_to`
   command for it.
+- The game rolls a `request_roll` at once and sends the result under LAST ROLL
+  in the next prompt. Narrate that outcome (success or failure); never roll
+  again or change it.
+- You may mark up to 4 words with an effect tag: `[burn]`, `[freeze]`,
+  `[shock]`, `[poison]`, `[whisper]` or `[holy]`, e.g. `[burn]torch[/burn]`.
+  No other markup.
 
 ## Reply format
 
@@ -36,4 +42,5 @@ Narration first. Then a line with exactly `<<STATE>>`. Then ONE JSON object:
            "add_items": [], "quest_updates": [{"id": "<quest id>", "stage": 1, "done": false}]}}
 ```
 
-Leave out anything that doesn't change.
+Leave out anything that doesn't change. At most 5 commands and 3 `add_items`;
+`dc` is a whole number.

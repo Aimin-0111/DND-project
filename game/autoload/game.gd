@@ -30,11 +30,15 @@ func new_game(seed_value: int = 12345) -> void:
 	state_changed.emit(state)
 
 
-func apply_changes(changes: Dictionary) -> void:
-	GameState.apply_changes(state, changes)
+## One checked turn: state changes, then the state side of the commands
+## (requested rolls happen here). Returns notes about anything refused.
+func apply_turn(changes: Dictionary, commands: Array) -> Array:
+	var notes := GameState.apply_changes(state, changes)
+	notes.append_array(GameState.apply_commands(state, commands, dice))
 	state["turn"] = int(state.get("turn", 0)) + 1
 	state["rng_state"] = dice.state()
 	state_changed.emit(state)
+	return notes
 
 
 func allowed_ids() -> Dictionary:

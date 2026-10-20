@@ -31,7 +31,8 @@ func run(commands: Array) -> void:
 					await hero.walk_to(target)
 					moved_to.emit(location_id)
 			"spawn":
-				_spawn(str(command.get("creature", "")), str(command.get("near", "")))
+				if _creature_count() < GameState.MAX_CREATURES:
+					_spawn(str(command.get("creature", "")), str(command.get("near", "")))
 			"despawn":
 				_despawn(str(command.get("creature", "")))
 			"weather":
@@ -52,7 +53,18 @@ func _location(id: String) -> Vector2:
 	return Vector2.INF
 
 
-func _spawn(creature_id: String, near_id: String) -> void:
+## Rebuilds creatures and weather from the state, e.g. after loading a save.
+func show_state(state: Dictionary) -> void:
+	for child in creatures_root.get_children():
+		creatures_root.remove_child(child)
+		child.queue_free()
+	for creature in state.get("creatures", []):
+		_spawn(str(creature.get("id", "")), str(creature.get("near", "")), false)
+	_set_weather(str(state.get("weather", "clear")), false)
+
+
+## The same creature id may appear twice; each node remembers its id.
+func _spawn(creature_id: String, near_id: String, announce: bool = true) -> void:
 	var path := CREATURE_SCENES % creature_id
 	if not ResourceLoader.exists(path):
 		push_warning("SceneDirector: no scene for creature '%s'" % creature_id)
@@ -61,23 +73,31 @@ func _spawn(creature_id: String, near_id: String) -> void:
 	if near == Vector2.INF:
 		return
 	var creature: Node2D = load(path).instantiate()
-	creature.name = creature_id
+	creature.set_meta("creature_id", creature_id)
 	creature.global_position = near + Vector2(randf_range(-16.0, 16.0), randf_range(-16.0, 16.0))
-	if creatures_root.get_node_or_null(creature_id) != null:
-		creatures_root.get_node(creature_id).queue_free()
 	creatures_root.add_child(creature)
-	note.emit("%s: %s (%s)" % [Content.t("ui.spawned"), creature_id, near_id])
+	if announce:
+		note.emit("%s: %s (%s)" % [Content.t("ui.spawned"), creature_id, near_id])
 
 
+## Removes the most recently added creature with that id, like the state does.
 func _despawn(creature_id: String) -> void:
-	var creature := creatures_root.get_node_or_null(creature_id)
-	if creature == null:
-		return
-	creature.queue_free()
-	note.emit("%s: %s" % [Content.t("ui.despawned"), creature_id])
+	var children := creatures_root.get_children()
+	for i in range(children.size() - 1, -1, -1):
+		if children[i].get_meta("creature_id", "") == creature_id:
+			children[i].queue_free()
+			note.emit("%s: %s" % [Content.t("ui.despawned"), creature_id])
+			return
 
 
-func _set_weather(kind: String) -> void:
+func _creature_count() -> int:
+	return creatures_root.get_children().filter(
+		func(child: Node) -> bool: return not child.is_queued_for_deletion()
+	).size()
+
+
+func _set_weather(kind: String, announce: bool = true) -> void:
 	if weather_tint != null:
 		weather_tint.color = WEATHER_COLORS.get(kind, Color.WHITE)
-	note.emit("%s: %s" % [Content.t("ui.weather"), kind])
+	if announce:
+		note.emit("%s: %s" % [Content.t("ui.weather"), kind])

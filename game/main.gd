@@ -29,6 +29,8 @@ func _ready() -> void:
 	call_deferred("_fit_layout")
 	_localize()
 	_show_demo_line()
+	if not Content.has_language_choice():
+		_ask_language()
 
 	act_button.pressed.connect(_on_act)
 	action_input.text_submitted.connect(func(_text: String) -> void: _on_act())
@@ -100,13 +102,18 @@ func _on_act() -> void:
 		_show_errors(result.get("errors", []))
 		return
 
-	var tagger := KeywordTagger.new()
-	tagger.load_keywords(Content.keywords(), Content.language())
-	story_log.add_entry(tagger.tag_option_c(str(result["narration"])))
-	await story_log.finished_typing
+	var narration := str(result["narration"])
+	if not narration.is_empty():
+		var tagger := KeywordTagger.new()
+		tagger.load_keywords(Content.keywords(), Content.language())
+		story_log.add_entry(tagger.tag_option_c(narration))
+		await story_log.finished_typing
+		GameState.remember_narration(Game.state, narration)
 
-	Game.apply_changes(result.get("changes", {}))
-	await director.run(result.get("commands", []))
+	var commands: Array = result.get("commands", [])
+	for note in Game.apply_turn(result.get("changes", {}), commands):
+		push_warning("Turn: %s" % str(note))
+	await director.run(commands)
 
 	var error := Game.save("auto")
 	if error == OK:
@@ -126,9 +133,17 @@ func _on_note(message: String) -> void:
 	status_label.text = message
 
 
-func _on_roll_requested(skill: String, dc: int) -> void:
-	status_label.text = "%s: %s (DC %d)" % [Content.t("ui.roll_requested"), skill, dc]
-	story_log.add_plain_line("%s: %s (DC %d)." % [Content.t("ui.roll_requested"), skill, dc])
+## The roll already happened in Game.apply_turn; this shows its result.
+func _on_roll_requested(_skill: String, _dc: int) -> void:
+	var roll: Variant = Game.state.get("last_roll")
+	if not (roll is Dictionary):
+		return
+	var outcome := Content.t("ui.roll_success") if roll["success"] else Content.t("ui.roll_failure")
+	var line := "%s: d20 %d %+d = %d (%s %d) - %s" % [
+		roll["skill"], roll["d20"], roll["modifier"], roll["total"], Content.t("ui.dc"), roll["dc"], outcome,
+	]
+	status_label.text = line
+	story_log.add_plain_line(line)
 
 
 func _on_save() -> void:
@@ -158,14 +173,54 @@ func _after_load() -> void:
 	if marker != null:
 		hero.global_position = marker.global_position
 	hero.stop()
-	for child in world.get_node("Creatures").get_children():
-		child.queue_free()
+	director.show_state(Game.state)
 	status_label.text = Content.t("ui.loaded")
 	story_log.add_plain_line(Content.t("ui.loaded"))
 
 
 func _on_language_requested() -> void:
 	Game.set_language("en" if Content.language() == "fr" else "fr")
+	Content.remember_language()
+
+
+## First launch: the player picks the language before anything else. The
+## shade covers the screen so the world can't be clicked meanwhile.
+func _ask_language() -> void:
+	var picker := ColorRect.new()
+	picker.name = "LanguagePicker"
+	picker.color = Color(0.0, 0.0, 0.0, 0.6)
+	picker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	picker.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 20)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.name = "Box"
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
+	var title := Label.new()
+	title.text = "%s / %s" % [Content.t_in("ui.choose_language", "en"), Content.t_in("ui.choose_language", "fr")]
+	box.add_child(title)
+	for lang in Content.LANGUAGES:
+		var button := Button.new()
+		button.name = lang
+		button.text = Content.t_in("ui.language_name", lang)
+		button.pressed.connect(_on_language_picked.bind(lang, picker))
+		box.add_child(button)
+	$DialogLayer.add_child(picker)
+	_set_busy(true)
+
+
+func _on_language_picked(lang: String, picker: Control) -> void:
+	Game.set_language(lang)
+	Content.remember_language()
+	picker.queue_free()
+	_set_busy(false)
 
 
 func _on_language_changed(_lang: String) -> void:
