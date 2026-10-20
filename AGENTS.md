@@ -6,7 +6,8 @@
 
 ## 0. TL;DR
 
-- **Le spec et le plan M1 sont approuvés, le jeu n'existe pas encore.** Il n'y a ni `game/`, ni scène Godot, ni build jouable. Prochaine étape : la tâche 1 de [tasks/todo.md](tasks/todo.md).
+- **Le spec et le plan M1 sont approuvés, le jeu n'existe pas encore sur `main`.** Il n'y a ni `game/`, ni scène Godot, ni build jouable. Prochaine étape : la tâche 1 de [tasks/todo.md](tasks/todo.md).
+- **Sur la branche `Beta-0.2`, `game/` existe** (tranche M1 d'Alban + corrections). Tests : `"$GODOT" --headless --path game --script res://tests/run_tests.gd` → `PASS: 14 test file(s)`. Ce qui diffère encore du spec : [docs/BETA-0.2.md](docs/BETA-0.2.md).
 - **Cible proposée :** Godot 4 (GDScript) + proxy Cloudflare Workers (M2) ; itch.io après M1. Godot sera confirmé ou rejeté par le prototype M1 ; repli : TypeScript + Phaser 4.
 - **Pendant M1, pas d'envoi sur itch.io :** les builds web se jouent en local (`localhost`).
 - **Le dépôt est public.** Aucun secret, jamais.

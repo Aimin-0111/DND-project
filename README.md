@@ -4,6 +4,8 @@
 
 > **État au 19 octobre 2026 : aucune version jouable.**
 > Le [spec](SPEC.md) et le [plan M1](tasks/plan.md) sont approuvés. Le projet Godot sera créé à la tâche 1 de [tasks/todo.md](tasks/todo.md).
+>
+> **Branche `Beta-0.2` : une version locale jouable.** Elle combine `main` et la tranche M1 d'Alban (`Beta-0.1`), avec les corrections de la relecture et les réponses déjà données au questionnaire. Les questions encore ouvertes ont une valeur par défaut. Détails : [docs/BETA-0.2.md](docs/BETA-0.2.md). Elle n'est pas fusionnée dans `main`.
 
 ---
 
@@ -270,6 +272,12 @@ Dossiers prévus par le spec mais **absents** aujourd'hui : `game/` (projet Godo
   - pas de dossier `reference/`.
 
   `CLAUDE.md`, `docs/PLAN.md`, ce README et `AGENTS.md` sont alignés sur le spec.
+- **19 octobre 2026** — Branche `Beta-0.2` : `main` + `Beta-0.1` d'Alban.
+  - Le jeu lance les dés que l'IA demande ; le résultat part dans le prompt suivant.
+  - Vérifications des réponses renforcées (plus de plantage sur `null`).
+  - L'état garde la météo et les créatures.
+  - Langue choisie au premier lancement ; marche en 8 directions ; preset d'export Web.
+  - 14 fichiers de tests passent. Non fusionnée dans `main` ; voir [docs/BETA-0.2.md](docs/BETA-0.2.md).
 
 ---
 
@@ -282,6 +290,7 @@ Dossiers prévus par le spec mais **absents** aujourd'hui : `game/` (projet Godo
 | [tasks/todo.md](tasks/todo.md) | Les 26 tâches de M1, avec critères d'acceptation |
 | [docs/PLAN.md](docs/PLAN.md) | Vision, décisions, jalons, rôles, réponses de l'équipe |
 | [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md) | Les 23 questions à trancher en équipe |
+| [docs/BETA-0.2.md](docs/BETA-0.2.md) | Branche `Beta-0.2` : changements, réponses appliquées, valeurs par défaut |
 | [examples/README.md](examples/README.md) | Carte des exemples et options comparées |
 | [examples/interface/mockups.html](examples/interface/mockups.html) | Maquettes visuelles (à ouvrir dans un navigateur) |
 | [examples/godot/scene_tree.md](examples/godot/scene_tree.md) | Structure de scène et flux d'un tour |
