@@ -1,0 +1,70 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://main.gd" id="1"]
+[ext_resource type="PackedScene" path="res://world/world.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://ui/story_panel.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://ui/paste_dialog.tscn" id="5"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.06, 0.07, 1)
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+
+[node name="Hud" parent="HUDLayer" instance=ExtResource("4")]
+
+[node name="DialogLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="PasteDialog" parent="DialogLayer" instance=ExtResource("5")]
+
+[node name="Split" type="HSplitContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+split_offset = 768
+
+[node name="WorldView" type="SubViewportContainer" parent="Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Split/WorldView"]
+handle_input_locally = false
+size = Vector2i(768, 720)
+render_target_update_mode = 4
+
+[node name="World" parent="Split/WorldView/SubViewport" instance=ExtResource("2")]
+
+[node name="StoryPanel" parent="Split" instance=ExtResource("3")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Stack" type="VSplitContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+split_offset = 0
