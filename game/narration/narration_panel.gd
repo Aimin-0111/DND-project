@@ -8,6 +8,8 @@ signal finished_typing
 @export var animated_entries := 4
 @export var reduce_motion := false
 
+## Effects with a moving look; the others always show their still colour.
+const ANIMATED := ["burn", "freeze", "shock"]
 const STILL_COLORS := {
 	"burn": "#ff8a3d", "freeze": "#9fd8ff", "shock": "#ffe066",
 	"poison": "#8fd16a", "whisper": "#b9b3c9", "holy": "#ffe9a8",
@@ -73,12 +75,15 @@ func _rebuild() -> void:
 	for i in _entries.size():
 		var entry := _entries[i]
 		if reduce_motion or i < first_animated:
-			entry = _freeze_effects(entry)
+			entry = _freeze_effects(entry, STILL_COLORS.keys())
+		else:
+			entry = _freeze_effects(entry, STILL_COLORS.keys().filter(
+				func(effect: String) -> bool: return not effect in ANIMATED))
 		append_text(entry + "\n\n")
 
 
-func _freeze_effects(bbcode_text: String) -> String:
-	for effect in STILL_COLORS:
+func _freeze_effects(bbcode_text: String, effects: Array) -> String:
+	for effect in effects:
 		bbcode_text = bbcode_text.replace("[%s]" % effect, "[color=%s]" % STILL_COLORS[effect])
 		bbcode_text = bbcode_text.replace("[/%s]" % effect, "[/color]")
 	return bbcode_text

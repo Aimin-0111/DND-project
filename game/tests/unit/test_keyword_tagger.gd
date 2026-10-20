@@ -58,4 +58,20 @@ func run() -> Array:
 	if many.count("[burn]") != 6:
 		failures.append("at most 6 words should animate per entry: %s" % many)
 
+	failures.append_array(_panel_checks())
 	return failures
+
+
+## Effects not built yet (poison, whisper, holy) show their still colour,
+## never raw tags.
+func _panel_checks() -> Array:
+	var tree := Engine.get_main_loop() as SceneTree
+	var panel: RichTextLabel = load("res://narration/narration_panel.gd").new()
+	tree.root.add_child(panel)
+	panel.add_entry("[poison]venom[/poison] and [burn]fire[/burn]")
+	var shown := panel.get_parsed_text()
+	tree.root.remove_child(panel)
+	panel.free()
+	if "[" in shown or not "venom and fire" in shown:
+		return ["unbuilt effects should show as coloured text: '%s'" % shown]
+	return []
