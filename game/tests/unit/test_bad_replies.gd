@@ -174,9 +174,98 @@ const RULES := [
 	],
 ]
 
-## Pieces of random replies, right and wrong. Numbers stay far below 2^63:
-## from there up the parser gets them wrong (docs/m1-ai-tests.md, "Found by
-## the tests").
+## The four problems in docs/m1-ai-tests.md, "Found by the tests", with what
+## SPEC-dm asks for: [what, reply, narration, kept commands, kept state,
+## noted]. A reply that starts with { or [ is a JSON block after "The road is
+## quiet." and the marker line (narration null); one that names a file is
+## read from tests/fixtures/replies/bad/ and checked with Unix and Windows
+## line breaks; any other text is the whole reply.
+const FOUND := [
+	# 1. From 2^63 up, int() overflowed before clamping: −200, −30, 0.
+	[
+		"1. gold, HP and time of 1e19",
+		'{"state": {"gold_delta": 1e19, "hp_delta": 1e19, "time_advance_minutes": 1e19}}',
+		null, [], {"gold_delta": 200, "hp_delta": 30, "time_advance_minutes": 1440}, true,
+	],
+	[
+		"1. a 20-digit gold amount",
+		'{"commands": [{"type": "weather", "kind": "fog"}], "state": {"gold_delta": 99999999999999999999, "time_advance_minutes": 2}}',
+		null, [{"type": "weather", "kind": "fog"}], {"gold_delta": 200, "time_advance_minutes": 2}, true,
+	],
+	[
+		"1. exactly 2^63",
+		'{"state": {"gold_delta": 9223372036854775808, "hp_delta": 9223372036854775808, "time_advance_minutes": 9223372036854775808}}',
+		null, [], {"gold_delta": 200, "hp_delta": 30, "time_advance_minutes": 1440}, true,
+	],
+	[
+		"1. gold, HP and time of -1e19",
+		'{"state": {"gold_delta": -1e19, "hp_delta": -1e19, "time_advance_minutes": -1e19}}',
+		null, [], {"gold_delta": -200, "hp_delta": -30, "time_advance_minutes": 0}, true,
+	],
+	[
+		"1. numbers too big for a float",
+		'{"state": {"gold_delta": 1e400, "hp_delta": -1e400}}',
+		null, [], {"gold_delta": 200, "hp_delta": -30}, true,
+	],
+	# 2. A stage from 2^63 up was kept as -9223372036854775808.
+	[
+		"2. a quest stage of 1e19",
+		'{"state": {"quest_updates": [{"id": "the_silent_mill", "stage": 1e19, "done": true}], "gold_delta": 1}}',
+		null, [], {"gold_delta": 1}, true,
+	],
+	[
+		"2. a quest stage of 2^63, then a good one",
+		'{"state": {"quest_updates": [{"id": "the_silent_mill", "stage": 9223372036854775808, "done": true}, {"id": "the_silent_mill", "stage": 2}]}}',
+		null, [], {"quest_updates": [{"id": "the_silent_mill", "stage": 2, "done": false}]}, true,
+	],
+	# 3. The marker is a line with exactly <<STATE>>; one inside a sentence
+	# is narration.
+	[
+		"3. a marker inside a sentence, no block",
+		"marker_in_sentence.txt",
+		'You shout "<<STATE>> {"state": {"gold_delta": 200}}" at the river. Nothing happens.', [], {}, true,
+	],
+	[
+		"3. a marker inside a sentence, then the block",
+		"marker_in_sentence_then_block.txt",
+		'You shout "<<STATE>> {"state": {"gold_delta": 200}}" at the river. Nothing happens.',
+		[{"type": "weather", "kind": "fog"}], {}, false,
+	],
+	[
+		"3. text after the marker on its line",
+		'The road is quiet. <<STATE>>\n{"state": {"gold_delta": 5}}',
+		'The road is quiet. <<STATE>>\n{"state": {"gold_delta": 5}}', [], {}, true,
+	],
+	[
+		"3. text before the marker on its line",
+		'The road is quiet.\n<<STATE>> {"state": {"gold_delta": 5}}',
+		'The road is quiet.\n<<STATE>> {"state": {"gold_delta": 5}}', [], {}, true,
+	],
+	[
+		"3. two marker lines",
+		'You shout:\n<<STATE>>\n{"state": {"gold_delta": 200}}\nNothing happens.\n<<STATE>>\n{"commands": [{"type": "weather", "kind": "fog"}]}',
+		"You shout:", [], {}, true,
+	],
+	# 4. Keys other than commands and state were dropped without a note.
+	[
+		"4. wrong top-level key names",
+		'{"command": [{"type": "move_to", "target": "old_mill"}], "changes": {"gold_delta": 5}}',
+		null, [], {}, true,
+	],
+	[
+		"4. a list of commands instead of the object",
+		'[{"type": "move_to", "target": "old_mill"}]',
+		null, [], {}, true,
+	],
+	[
+		"4. an unknown key next to good ones",
+		'{"commands": [{"type": "weather", "kind": "rain"}], "state": {"gold_delta": 5}, "mood": "grim"}',
+		null, [{"type": "weather", "kind": "rain"}], {"gold_delta": 5}, true,
+	],
+]
+
+## Pieces of random replies, right and wrong. Numbers from 2^63 up are
+## checked in FOUND.
 const NUMBERS := [0, 1, -1, 4, 5, 12.5, 13, 30, 31, -30, -31, 200, 201, -200, -201, 1440, 1441, 9999, -9999, 0.5, -0.5, 1e15, -1e15]
 const WORDS := [
 	"move_to", "spawn", "despawn", "emote", "weather", "request_roll", "teleport", "type", "commands",
@@ -190,6 +279,7 @@ func run() -> Array:
 	var failures: Array = []
 	failures.append_array(_crafted_replies())
 	failures.append_array(_other_rules())
+	failures.append_array(_found_by_tests())
 	failures.append_array(_robustness())
 	failures.append_array(_random_replies())
 	return failures
@@ -224,6 +314,32 @@ func _other_rules() -> Array:
 		failures.append_array(_kept_problems(rule[0], result, rule[2], rule[3]))
 		if result is Dictionary:
 			failures.append_array(_note_problems(rule[0], result, rule[4]))
+	return failures
+
+
+func _found_by_tests() -> Array:
+	var failures: Array = []
+	for case in FOUND:
+		var texts: Array = [case[1]]
+		if case[1].begins_with("{") or case[1].begins_with("["):
+			texts = [_reply(case[1])]
+		elif case[1].ends_with(".txt"):
+			var path: String = BAD + case[1]
+			if not FileAccess.file_exists(path):
+				failures.append("missing fixture %s" % path)
+				continue
+			var unix := FileAccess.get_file_as_string(path).replace("\r\n", "\n")
+			texts = [unix, unix.replace("\n", "\r\n")]
+		for text in texts:
+			var what: String = case[0] + (", Windows line breaks" if text.contains("\r\n") else "")
+			var result: Variant = DmReplyParser.parse(text, ALLOWED)
+			failures.append_array(_kept_problems(what, result, case[3], case[4]))
+			if not (result is Dictionary):
+				continue
+			var narration: String = "The road is quiet." if case[2] == null else case[2]
+			if result["narration"] != narration:
+				failures.append("%s: narration %s, expected %s" % [what, _short(str(result["narration"]).c_escape()), _short(narration.c_escape())])
+			failures.append_array(_note_problems(what, result, case[5]))
 	return failures
 
 

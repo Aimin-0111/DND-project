@@ -25,6 +25,10 @@ const LIMITS := {
 }
 const MAX_ADD_ITEMS := 3
 const CHANGE_KEYS := ["hp_delta", "gold_delta", "time_advance_minutes", "add_items", "quest_updates"]
+const REPLY_KEYS := ["commands", "state"]
+## 2^63: from here up, int() of a float overflows (to the most negative
+## integer on x86-64; the result is undefined in C++).
+const INT_LIMIT := 9223372036854775808.0
 
 
 ## Returns {"narration": String, "commands": Array, "state": Dictionary, "errors": Array}
@@ -33,19 +37,29 @@ const CHANGE_KEYS := ["hp_delta", "gold_delta", "time_advance_minutes", "add_ite
 ## of the square the hero ends up in. Without one, the M1 checks apply.
 static func parse(reply: String, allowed: Dictionary) -> Dictionary:
 	var out := {"narration": reply.strip_edges(), "commands": [], "state": {}, "errors": []}
-	var at := reply.find(MARKER)
-	if at == -1:
-		out["errors"].append("No %s block: narration only." % MARKER)
+	var markers := _marker_lines(reply)
+	if markers.is_empty():
+		if reply.contains(MARKER):
+			out["errors"].append("%s is not on a line of its own: narration only." % MARKER)
+		else:
+			out["errors"].append("No %s block: narration only." % MARKER)
 		return out
+	var at: int = markers[0]
 	out["narration"] = reply.substr(0, at).strip_edges()
 	if str(out["narration"]).is_empty():
 		out["errors"].append("Empty narration before %s." % MARKER)
+	if markers.size() > 1:
+		out["errors"].append("More than one %s line: narration only." % MARKER)
+		return out
 
 	var json_text := _extract_json(reply.substr(at + MARKER.length()))
 	var data: Variant = JSON.parse_string(json_text)
 	if not (data is Dictionary):
 		out["errors"].append("The state block is not valid JSON.")
 		return out
+	for key in data:
+		if not key in REPLY_KEYS:
+			out["errors"].append("%s block: unknown key '%s' ignored." % [MARKER, str(key)])
 
 	var commands: Variant = data.get("commands", [])
 	if commands is Array:
@@ -61,6 +75,24 @@ static func parse(reply: String, allowed: Dictionary) -> Dictionary:
 	elif data.has("state"):
 		out["errors"].append("state must be an object.")
 	return out
+
+
+## SPEC-dm: the marker is "a line with exactly <<STATE>>". One with other
+## text on its line (the narration quoting what the player typed, say) is
+## narration. A "\r" before the line break is allowed (Windows line breaks).
+## Returns where the first two marker lines start: none, one, or two (too
+## many: the reply doesn't say which block is the AI's).
+static func _marker_lines(reply: String) -> Array:
+	var found: Array = []
+	var at := reply.find(MARKER)
+	while at != -1 and found.size() < 2:
+		var end := at + MARKER.length()
+		if end < reply.length() and reply[end] == "\r":
+			end += 1
+		if (at == 0 or reply[at - 1] == "\n") and (end == reply.length() or reply[end] == "\n"):
+			found.append(at)
+		at = reply.find(MARKER, at + MARKER.length())
+	return found
 
 
 ## The AI sometimes wraps JSON in ```json fences: keep the first { to last }.
@@ -184,10 +216,13 @@ static func _check_changes(changes: Dictionary, allowed: Dictionary, errors: Arr
 			errors.append("%s must be a number." % key)
 			continue
 		var limits: Vector2i = LIMITS[key]
-		var value := int(changes[key])
-		if value < limits.x or value > limits.y:
-			errors.append("%s = %d is out of range, clamped." % [key, value])
-		ok[key] = clampi(value, limits.x, limits.y)
+		# Clamp the float before int(): int() of a number from 2^63 up
+		# overflows. Cut toward zero first, as int() does.
+		var number: float = changes[key]
+		number = signf(number) * floorf(absf(number))
+		if number < limits.x or number > limits.y:
+			errors.append("%s = %s is out of range, clamped." % [key, _number_text(number)])
+		ok[key] = int(clampf(number, limits.x, limits.y))
 
 	var items: Array = []
 	for item_id in _list(changes, "add_items", errors):
@@ -215,6 +250,11 @@ static func _check_changes(changes: Dictionary, allowed: Dictionary, errors: Arr
 	return ok
 
 
+## A whole number as text, without int()'s overflow from 2^63 up.
+static func _number_text(number: float) -> String:
+	return str(int(number)) if absf(number) < INT_LIMIT else str(number)
+
+
 ## A missing list is fine; null, a number or text instead of a list is noted.
 static func _list(changes: Dictionary, key: String, errors: Array) -> Array:
 	if not changes.has(key):
@@ -229,6 +269,7 @@ static func _valid_quest_update(quest: Variant, allowed: Dictionary) -> bool:
 	if not (quest is Dictionary) or not quest.get("id") in allowed.get("quests", []):
 		return false
 	var stage: Variant = quest.get("stage")
-	if typeof(stage) != TYPE_FLOAT or stage < 0.0 or stage != floorf(stage):
+	# From 2^63 up, int() would turn the stage negative.
+	if typeof(stage) != TYPE_FLOAT or stage < 0.0 or stage >= INT_LIMIT or stage != floorf(stage):
 		return false
 	return not quest.has("done") or typeof(quest["done"]) == TYPE_BOOL
