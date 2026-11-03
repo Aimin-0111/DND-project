@@ -1,0 +1,11 @@
+Oda's mouth goes flat. She wipes her floury hands on her apron, slowly, like someone deciding how much to say. "Straight out, eh? Bold, for a ranger I've known all of an afternoon. Who I deal with is my business, and you'll not get a name from me just for asking nicely."
+
+She glances back at the shuttered windows of the old mill, and some of the steel leaves her voice. "What I will give you for free: that mill hasn't turned a wheel since last winter. Not one sack. So whoever is burning a light in there is no miller of mine, and that's what keeps me awake." Then, sharper: "Les meules! Earn the rest, Kael. Show me you're worth trusting, or keep your questions to yourself."
+
+Her arms stay folded. She is waiting to see whether you can talk your way back into her good books.
+
+<<STATE>>
+{"commands": [
+   {"type": "request_roll", "skill": "Persuasion", "dc": 13}
+ ],
+ "state": {"time_advance_minutes": 5}}

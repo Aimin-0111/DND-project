@@ -1,0 +1,8 @@
+You reach for the Dragonbane sword on your hip and find only your rusty sword, its edge pitted and its grip wrapped in old twine. Your pack holds no potion of giant strength either, just two healing draughts, their glass a little cloudy from the road.
+
+The rusty blade scrapes out of its sheath, and Oda takes a quick step back, eyeing it the way she would eye a cracked millstone. "Put that thing away before you cut your own foot off, ranger," she says. "We're going to a mill, not a battlefield."
+
+Your health is full, so a healing draught would be wasted for now. Do you keep the rusty blade ready and walk on beside Oda, or sheathe it and let her lead the way?
+
+<<STATE>>
+{"commands": [], "state": {}}
