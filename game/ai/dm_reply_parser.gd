@@ -78,7 +78,7 @@ static func _extract_json(text: String) -> String:
 static func _check_commands(commands: Array, allowed: Dictionary, errors: Array) -> Array:
 	var travel := {}
 	for command in commands:
-		if not (command is Dictionary) or command.get("type") != "travel":
+		if not _is_travel(command):
 			continue
 		var problem := _check_command(command, allowed, null)
 		if problem.is_empty() and not travel.is_empty():
@@ -90,7 +90,7 @@ static func _check_commands(commands: Array, allowed: Dictionary, errors: Array)
 	var kept: Array = [] if travel.is_empty() else [travel]
 	var places: Variant = _places_after(travel, allowed)
 	for command in commands:
-		if command is Dictionary and command.get("type") == "travel":
+		if _is_travel(command):
 			continue
 		var problem := _check_command(command, allowed, places)
 		if problem.is_empty():
@@ -98,6 +98,12 @@ static func _check_commands(commands: Array, allowed: Dictionary, errors: Array)
 		else:
 			errors.append(problem)
 	return kept
+
+
+## The AI may put any JSON value in "type"; comparing a number or a list with
+## text would stop the checks, so only text is compared.
+static func _is_travel(command: Variant) -> bool:
+	return command is Dictionary and command.get("type") is String and command["type"] == "travel"
 
 
 ## The places of the square the hero will be in after this reply's travel

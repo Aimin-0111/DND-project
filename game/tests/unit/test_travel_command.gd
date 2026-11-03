@@ -95,6 +95,13 @@ func _travel_checks() -> Array:
 	var no_map := _parse('{"type": "travel", "to": "north"}, {"type": "move_to", "target": "old_mill"}', m1)
 	if no_map["commands"] != [{"type": "move_to", "target": "old_mill"}]:
 		failures.append("without a map view, travel is dropped and the M1 move_to check applies: %s" % str(no_map["commands"]))
+
+	var odd := _parse('{"type": true}, {"type": 3}, {"type": ["travel"]}, {"type": {"travel": 1}}, {"type": "travel", "to": "north"}')
+	if odd["commands"] != [{"type": "travel", "to": "north"}] or odd["errors"].size() != 4:
+		failures.append("a type that isn't text is dropped and noted, and the travel still applies: %s" % str(odd))
+	var odd_m1 := _parse('{"type": true}, {"type": "weather", "kind": "rain"}', m1)
+	if odd_m1["commands"] != [{"type": "weather", "kind": "rain"}] or odd_m1["errors"].size() != 1:
+		failures.append("without a map view, a type that isn't text doesn't drop the other commands: %s" % str(odd_m1))
 	return failures
 
 
