@@ -4,6 +4,26 @@ ui.act,Agir,Act
 ui.roll,Lancer les dés,Roll dice
 ui.save,Sauvegarder,Save
 ui.load,Charger,Load
+ui.settings,Réglages,Settings
+ui.settings_save,Enregistrer,Save
+ui.ai_mode,Mode IA,AI mode
+ui.ai_mode_copy_paste,Copier-coller (gratuit),Copy-paste (free)
+ui.ai_mode_own_key,Ma propre clé API,My own API key
+ui.hud_ai_copy_paste,IA : copier-coller,AI: copy-paste
+ui.hud_ai_own_key,IA : ma clé,AI: own key
+ui.api_key,Clé API Claude,Claude API key
+ui.api_key_placeholder,Colle ta clé ici,Paste your key here
+ui.api_key_saved,Une clé est enregistrée sur cet appareil,A key is saved on this device
+ui.api_key_note,Enregistrée seulement sur cet appareil (dans ce navigateur pour la version web).,Stored only on this device (in this browser for the web version).
+ui.clear,Effacer,Clear
+ui.key_cleared,Clé effacée de cet appareil.,Key removed from this device.
+ui.ai_no_key,Aucune clé API. Ajoute la tienne dans les réglages ou passe en mode copier-coller.,No API key set. Add yours in Settings or switch to copy-paste mode.
+ui.ai_key_refused,La clé API a été refusée. Vérifie-la dans les réglages.,The API key was refused. Check it in Settings.
+ui.ai_service_error,Le service d'IA a répondu par une erreur. Réessaie dans un moment.,The AI service answered with an error. Try again in a moment.
+ui.ai_network_error,Impossible de joindre le service d'IA. Vérifie ta connexion internet.,Can't reach the AI service. Check your internet connection.
+ui.ai_timeout,Pas de réponse de l'IA après 90 secondes. Réessaie.,No answer from the AI after 90 seconds. Try again.
+ui.ai_refusal,Le MJ ne peut pas raconter ça. Essaie une autre action.,The DM can't narrate that. Try another action.
+ui.ai_cut_off,La réponse du MJ a été coupée : la fin peut manquer.,The DM's reply was cut off: the end may be missing.
 ui.language,Langue,Language
 ui.copy_prompt,Copier le prompt,Copy prompt
 ui.paste_reply,Coller la réponse,Paste reply
