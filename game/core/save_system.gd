@@ -58,12 +58,30 @@ static func migrate(data: Dictionary) -> Dictionary:
 		return {}
 	while version < GameState.VERSION:
 		match version:
+			1:
+				data = _v1_to_v2(data)
 			_:
 				push_warning("SaveSystem: no migration from version %d" % version)
 				return {}
 		version += 1
 		data["version"] = version
 	return GameState.fill_defaults(data)
+
+
+## Version 1 (Beta-0.1/0.2, one zone) -> 2 (Beta-0.3, a grid of squares).
+## The square and the hero's tile can't be known without the map: they stay
+## empty here and WorldState.settle fills them from the v1 location (and each
+## creature's square from its place) once the map is loaded.
+static func _v1_to_v2(data: Dictionary) -> Dictionary:
+	data["square"] = ""
+	data["hero_cell"] = []
+	data["squares"] = {}
+	var creatures: Variant = data.get("creatures")
+	if creatures is Array:
+		for creature in creatures:
+			if creature is Dictionary:
+				creature["square"] = ""
+	return data
 
 
 static func _valid_slot(slot: String) -> bool:

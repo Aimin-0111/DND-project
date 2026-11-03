@@ -22,6 +22,8 @@ const TEST_PATHS := [
 	"res://tests/integration/test_ui_actions.gd",
 	"res://tests/unit/test_map_content.gd",
 	"res://tests/unit/test_square_generator.gd",
+	"res://tests/unit/test_world_state.gd",
+	"res://tests/unit/test_travel_command.gd",
 ]
 
 

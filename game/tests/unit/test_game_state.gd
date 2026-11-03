@@ -1,13 +1,13 @@
 extends RefCounted
-## Version-1 state shape, clamping and deep snapshots.
+## State shape (version 2 since Beta-0.3), clamping and deep snapshots.
 
 
 func run() -> Array:
 	var failures: Array = []
 	var state := GameState.new_game(42)
 
-	if int(state["version"]) != 1:
-		failures.append("version: expected 1")
+	if int(state["version"]) != 2:
+		failures.append("version: expected 2")
 	if state["language"] != "fr":
 		failures.append("default language should be fr")
 	if int(state["hero"]["hp"]) != 12:

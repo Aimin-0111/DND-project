@@ -1,9 +1,12 @@
 class_name GameState
 extends RefCounted
-## The whole game in one JSON-serializable Dictionary. Version 1 is the M1
-## shape; any shape change bumps VERSION and adds a migration in SaveSystem.
+## The whole game in one JSON-serializable Dictionary. Version 1 was the M1
+## shape; version 2 (Beta-0.3) adds the grid of squares (square, hero_cell,
+## squares, a square on each creature). Any shape change bumps VERSION and adds
+## a migration in SaveSystem.
 
-const VERSION := 1
+const VERSION := 2
+## Creatures in one square at once (they stay in their square when the hero leaves).
 const MAX_CREATURES := 6
 const MAX_QTY := 99
 const MAX_TIME_ADVANCE := 24 * 60
@@ -25,7 +28,11 @@ static func new_game(seed_value: int) -> Dictionary:
 		"rng_state": 0,
 		"turn": 0,
 		"time_minutes": 8 * 60,
-		"location": "mill_road",
+		"location": WorldState.START_PLACE,
+		# Filled by WorldState.settle from the start place once the map is loaded.
+		"square": "",
+		"hero_cell": [],
+		"squares": {},
 		"weather": "clear",
 		"language": "fr",
 		"hero": {
@@ -77,22 +84,50 @@ static func apply_changes(state: Dictionary, changes: Dictionary) -> Array:
 
 
 ## State side of the checked commands; the world plays them afterwards.
-## last_roll is cleared first: it was sent in this turn's prompt.
-static func apply_commands(state: Dictionary, commands: Array, dice: Dice) -> Array:
+## last_roll is cleared first: it was sent in this turn's prompt. A travel
+## (at most one, played first) needs the world map; the commands after it act
+## in the destination square. The travel command gets the destination
+## "square" and the arrival "cell" written into it, for the world to play.
+static func apply_commands(state: Dictionary, commands: Array, dice: Dice, world: WorldMap = null) -> Array:
 	var notes: Array = []
 	state["last_roll"] = null
+	var travelled := false
 	for command in commands:
 		match str(command.get("type", "")):
-			"move_to":
-				state["location"] = str(command["target"])
-			"spawn":
-				if state["creatures"].size() >= MAX_CREATURES:
-					notes.append("spawn: already %d creatures, '%s' refused." % [MAX_CREATURES, command["creature"]])
+			"travel":
+				command.erase("square")
+				command.erase("cell")
+				if travelled:
+					notes.append("travel: only one per turn, '%s' ignored." % str(command.get("to", "")))
+					continue
+				travelled = true
+				if world == null:
+					notes.append("travel: no world map, '%s' ignored." % str(command.get("to", "")))
+					continue
+				var result := WorldState.travel(state, world, str(command.get("to", "")))
+				if result["ok"]:
+					command["square"] = result["square"]
+					command["cell"] = [result["cell"].x, result["cell"].y]
 				else:
-					state["creatures"].append({"id": str(command["creature"]), "near": str(command["near"])})
+					notes.append(result["note"])
+			"move_to":
+				var target := str(command["target"])
+				state["location"] = target
+				if world != null and world.place_square(target) == str(state.get("square", "")):
+					var marker := world.place_cell(target)
+					state["hero_cell"] = [marker.x, marker.y]
+			"spawn":
+				var square := str(state.get("square", ""))
+				if creatures_in(state, square) >= MAX_CREATURES:
+					notes.append("spawn: already %d creatures here, '%s' refused." % [MAX_CREATURES, command["creature"]])
+				else:
+					var creature := {"id": str(command["creature"]), "near": str(command["near"]), "square": square}
+					if creature["near"] == "hero" and state.get("hero_cell") is Array:
+						creature["cell"] = (state["hero_cell"] as Array).duplicate()
+					state["creatures"].append(creature)
 			"despawn":
 				if not _remove_last_creature(state, str(command["creature"])):
-					notes.append("despawn: no '%s' present." % command["creature"])
+					notes.append("despawn: no '%s' here." % command["creature"])
 			"weather":
 				state["weather"] = str(command["kind"])
 			"request_roll":
@@ -125,15 +160,34 @@ static func remember_narration(state: Dictionary, narration: String) -> void:
 	state["story_summary"] = STORY_SEPARATOR.join(recent)
 
 
-## Fills the fields a Beta-0.1 save didn't have yet (same version 1).
+## Fills the fields a Beta-0.1 save didn't have yet (same version 1), and
+## repairs the version 2 fields of a hand-edited save.
 static func fill_defaults(state: Dictionary) -> Dictionary:
 	if not state.has("weather"):
 		state["weather"] = "clear"
 	if not (state.get("creatures") is Array):
 		state["creatures"] = []
+	state["creatures"] = state["creatures"].filter(func(creature: Variant) -> bool: return creature is Dictionary)
 	if not state.has("last_roll"):
 		state["last_roll"] = null
+	if not (state.get("square") is String):
+		state["square"] = ""
+	if not (state.get("hero_cell") is Array):
+		state["hero_cell"] = []
+	if not (state.get("squares") is Dictionary):
+		state["squares"] = {}
+	if not (state.get("location") is String):
+		state["location"] = ""
 	return state
+
+
+## How many creatures are in a square.
+static func creatures_in(state: Dictionary, square: String) -> int:
+	var count := 0
+	for creature in state.get("creatures", []):
+		if str(creature.get("square", "")) == square:
+			count += 1
+	return count
 
 
 ## Deep copy used by Rewind and tests.
@@ -166,10 +220,12 @@ static func _update_quest(state: Dictionary, quest_id: String, stage: int, done:
 	}
 
 
+## Removes the most recent creature with that id in the hero's square.
 static func _remove_last_creature(state: Dictionary, creature_id: String) -> bool:
 	var creatures: Array = state["creatures"]
+	var square := str(state.get("square", ""))
 	for i in range(creatures.size() - 1, -1, -1):
-		if str(creatures[i].get("id", "")) == creature_id:
+		if str(creatures[i].get("id", "")) == creature_id and str(creatures[i].get("square", "")) == square:
 			creatures.remove_at(i)
 			return true
 	return false
