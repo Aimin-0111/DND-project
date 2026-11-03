@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://cth1731up64g"
+path="res://.godot/imported/mill-road.png-7a66a5d2011a464205f10a2d2100ec32.image"
+
+[deps]
+
+source_file="res://content/maps/squares/mill-road.png"
+dest_files=["res://.godot/imported/mill-road.png-7a66a5d2011a464205f10a2d2100ec32.image"]
+
+[params]
+

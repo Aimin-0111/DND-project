@@ -43,3 +43,15 @@ ui.roll_failure,Échec,Failure
 ui.dc,DD,DC
 ui.choose_language,Choisis ta langue,Choose your language
 ui.language_name,Français,English
+kind.meadow.name,Prairie,Meadow
+kind.forest.name,Forêt,Forest
+kind.hills.name,Collines,Hills
+kind.road.name,Route,Road
+kind.marsh.name,Marais,Marsh
+kind.lake.name,Lac,Lake
+kind.mountain.name,Montagne,Mountain
+travel.north,Je pars vers le nord ({kind}).,I head north ({kind}).
+travel.east,Je pars vers l'est ({kind}).,I head east ({kind}).
+travel.south,Je pars vers le sud ({kind}).,I head south ({kind}).
+travel.west,Je pars vers l'ouest ({kind}).,I head west ({kind}).
+ui.way_blocked,Impossible d'aller par là.,You can't go that way.
