@@ -9,7 +9,7 @@ signal finished_typing
 @export var reduce_motion := false
 
 ## Effects with a moving look; the others always show their still colour.
-const ANIMATED := ["burn", "freeze", "shock"]
+const ANIMATED := ["burn", "freeze", "shock", "poison", "whisper", "holy"]
 const STILL_COLORS := {
 	"burn": "#ff8a3d", "freeze": "#9fd8ff", "shock": "#ffe066",
 	"poison": "#8fd16a", "whisper": "#b9b3c9", "holy": "#ffe9a8",
@@ -26,6 +26,9 @@ func _ready() -> void:
 	install_effect(BurnEffect.new())
 	install_effect(FreezeEffect.new())
 	install_effect(ShockEffect.new())
+	install_effect(PoisonEffect.new())
+	install_effect(WhisperEffect.new())
+	install_effect(HolyEffect.new())
 
 
 ## bbcode_text comes from KeywordTagger and is already safe.
