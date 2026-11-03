@@ -1,4 +1,4 @@
-id
-mill_road
-mill_bridge
-old_mill
+id,square,x,y
+mill_road,sq_24_24,16,31
+mill_bridge,sq_24_24,45,31
+old_mill,sq_24_24,54,29

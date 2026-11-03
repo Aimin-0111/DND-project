@@ -604,3 +604,156 @@ Also `sync_from_state` at game start, a generic creature scene that takes its sp
 - [ ] All M1 success criteria in SPEC.md are met or explained.
 - [ ] The engine decision is recorded.
 - [ ] Next: write the M2 module specs (`proxy`, plus the M2 parts of `core` and `main-screen`).
+
+---
+
+## Phase 6 (Beta-0.3): Map squares
+
+*Added November 3, 2026 from the lead's decisions of November 2 (a grid of big square maps; the DM decides travel). Specs: [SPEC-map.md](../SPEC-map.md), and the Beta-0.3 parts of SPEC-world, SPEC-core, SPEC-dm, SPEC-content and SPEC-main-screen. Built on the `Beta-0.2` code (`game/ai/`, `game/core/`… rather than `game/src/`), on branch `Beta-0.3-map-squares`. Tests: `"$GODOT" --headless --path game --script res://tests/run_tests.gd` (count any `SCRIPT ERROR` as a failure), then `python tools/content_check.py --check --langs fr,en`.*
+
+### - [x] Task 27: Map files and placeholder art
+
+**Description:** Create the map content in `content/maps/`:
+- `kinds.csv` (the 7 starter kinds + `handmade`), `tiles.csv` (one row per tile of the tileset), `squares.csv` (the start square);
+- `locations.csv` gets `square, x, y`;
+- a placeholder `world.png` of about 48 × 48 squares, with a region of each kind plus a road, and the start square painted magenta near the middle;
+- the 64 × 64 start square with the Mill Road content (road, river and bridge, old mill, three markers);
+- `art/tiles-placeholder.png` extended (rock, floor, wall, bridge, sand, flowers…), keeping the 4 old tiles where they were.
+
+The images are made by a standard-library Python script (`tools/make_placeholder_maps.py`); the PNGs are imported as Image; `art/CREDITS.md` is updated.
+
+**Acceptance criteria:**
+- [x] The content check passes on the new files.
+- [x] `world.png` has every starter kind, a road through the start square, and the start square in magenta.
+- [x] The start square has exits in the middle of its four edges, facing squares the hero can enter.
+
+**Verification:** content check; open the PNGs (zoomed) and look.
+
+**Dependencies:** none (built on Beta-0.2)
+
+**Files:** `content/maps/*`, `content/data/locations.csv`, `content/art/tiles-placeholder.png`, `content/art/CREDITS.md`, `tools/make_placeholder_maps.py`
+
+**Scope:** M
+
+### - [x] Task 28: Map loader and map checks
+
+**Description:**
+- **Loader:** `map/map_loader.gd` reads the map files into a `WorldMap` (`map/world_map.gd`) and a `TileTable` (`map/tile_table.gd`). Problems are collected with the file and pixel position; the game keeps running.
+- **Content check:** `tools/content_check.py` (standard library only, its own PNG reader) reports unknown colours with the pixel position, wrong image sizes, markers outside their square or on blocked tiles, hand-made squares off the world map, and exits facing a square the hero can't enter (a warning).
+
+**Acceptance criteria:**
+- [x] The real files load with no problems; ids `sq_<x>_<y>` round-trip and malformed ids are refused.
+- [x] A crafted image with an unknown colour is reported with its position, in the game and in the content check.
+- [x] Each new content check fires on a crafted bad copy of the content.
+
+**Verification:** tests command; content check on the real files and on crafted copies.
+
+**Dependencies:** Task 27
+
+**Files:** `map/map_loader.gd`, `map/world_map.gd`, `map/tile_table.gd`, `tools/content_check.py`, `tests/unit/test_map_content.gd`
+
+**Scope:** M
+
+### - [x] Task 29: Square generator
+
+**Description:** `map/square_generator.gd` and `map/square_grid.gd`: generate a square from the seed, its coordinates, its kind and its neighbours' kinds (border blocked, the middle of each edge facing an enterable square open, paths from each opening to the centre, roads joining road and hand-made neighbours); plus exits, arrival and step-back geometry.
+
+**Acceptance criteria:**
+- [x] The same inputs give the same tiles; generation doesn't touch the dice.
+- [x] Over many seeds and every kind: every open exit reaches every other one; closed edges are closed; open edges are walkable exactly on cells 30–33; corners are blocked.
+- [x] A road square's path reaches each edge facing a road or hand-made square.
+
+**Verification:** tests command.
+
+**Dependencies:** Task 28
+
+**Files:** `map/square_generator.gd`, `map/square_grid.gd`, `tests/unit/test_square_generator.gd`
+
+**Scope:** M
+
+### - [x] Task 30: State v2 and travel in core
+
+**Description:** State version 2 (`square`, `hero_cell`, `squares`, creatures with a `square`), the v1 → v2 migration, and `core/world_state.gd`: travel, `set_hero_cell`, `settle` and stored tiles. `apply_commands` gets the map and applies `travel` first; `move_to`, `spawn` and `despawn` act in the current square.
+
+**Acceptance criteria:**
+- [x] Every SPEC-core Beta-0.3 criterion has a passing test, including a Beta-0.2 save loading.
+- [x] Creatures stay behind in their square; the creature limit counts one square.
+
+**Verification:** tests command.
+
+**Dependencies:** Task 29
+
+**Files:** `core/game_state.gd`, `core/world_state.gd`, `core/save_system.gd`, `autoload/game.gd`, `tests/unit/test_world_state.gd`
+
+**Scope:** M
+
+### - [ ] Task 31: The travel command and the MAP prompt part
+
+**Description:** Add `travel` to the reply checks (at most one, direction or visited id, played first, other commands checked against the destination), the MAP part to the prompt (through `Game.allowed_ids()`, without touching `autoload/dm.gd`), and the travel lines to `dm-rules.md`.
+
+**Acceptance criteria:**
+- [x] Every SPEC-dm Beta-0.3 criterion has a passing test.
+- [x] The old fixtures (S1, S6, S8) and the M1 parser tests still pass unchanged.
+- [ ] S1, S8 and one exit turn rerun through the real game with the new rules (lead, copy-paste mode).
+
+**Verification:** tests command; the reruns are manual.
+
+**Dependencies:** Task 30
+
+**Files:** `ai/dm_reply_parser.gd`, `ai/prompt_builder.gd`, `content/writing/dm-rules.md`, `tests/unit/test_travel_command.gd`
+
+**Scope:** M
+
+### - [ ] Task 32: The world draws squares
+
+**Description:** `world/world.gd` draws the current square from its tiles (TileSet built from `tiles.csv`), with path-finding per square, camera limits, markers from `locations.csv`, Oda only in the square of `old_mill`, a short fade when the square changes, and `show_state` for loads. The scene director plays `travel` and `spawn near hero`. Walking speed about 5 tiles per second (one setting). The HUD place label shows the place or the square's kind.
+
+**Acceptance criteria:**
+- [ ] SPEC-world Beta-0.3 criteria: the automated ones pass; the manual ones are checked by the lead.
+- [x] Loading a save restores the square, the hero's tile and that square's creatures.
+
+**Verification:** tests command; manual in the editor.
+
+**Dependencies:** Task 31
+
+**Files:** `world/world.gd`, `world/world.tscn`, `world/scene_director.gd`, `world/movement_click.gd`, `ui/hud.gd`, `content/i18n/strings.csv`, `tests/integration/test_world_squares.gd`
+
+**Scope:** M
+
+### - [ ] Task 33: Exits and the automatic travel turn
+
+**Description:** In `main.gd`: when a walk ends on an exit, send the automatic action ("I head north (forest).", plus the typed text) as a turn; step back one tile when the reply has no travel or the turn is cancelled; "You can't go that way." for exits facing a square that can't be entered. The hero is locked during a turn.
+
+**Acceptance criteria:**
+- [ ] SPEC-main-screen Beta-0.3 criteria: the automated ones pass; the manual ones are checked by the lead.
+
+**Verification:** tests command; manual in the editor (copy-paste mode).
+
+**Dependencies:** Task 32
+
+**Files:** `main.gd`, `tests/integration/test_world_squares.gd`
+
+**Scope:** M
+
+### - [ ] Task 34: Map guide and Beta-0.3 notes
+
+**Description:** A French guide for the artist, `docs/GUIDE-CARTES.md` (drawing the world map and a square, the colour tables, where to leave exits, the 64 × 64 size), and the English notes `docs/BETA-0.3-MAP-SQUARES.md` (what changed, how to run it, what was and wasn't checked, open questions, which files the artist and the writer should hear about).
+
+**Acceptance criteria:**
+- [ ] The artist can draw a new hand-made square from the guide alone (the lead checks).
+- [x] The notes list exactly what was checked and what the lead must try by hand.
+
+**Verification:** read both files.
+
+**Dependencies:** Tasks 27–33
+
+**Files:** `docs/GUIDE-CARTES.md`, `docs/BETA-0.3-MAP-SQUARES.md`
+
+**Scope:** S
+
+**Status (November 3, 2026):** ticked items were verified by running the tests, the content check and a scripted play-through (see [docs/BETA-0.3-MAP-SQUARES.md](../docs/BETA-0.3-MAP-SQUARES.md)). The open ones need the lead (manual checks, real AI turns) or the artist.
+
+### Checkpoint: Beta-0.3
+- [x] All tests and the content check pass.
+- [ ] The lead walks across several squares, sees the fade, and tries the paste window at an exit (cancel once, travel once).
+- [ ] The artist and the writer have heard about the files that concern them (see the notes).

@@ -1,6 +1,6 @@
 # Spec: Brasswake Reach
 
-*Status: approved October 19, 2026; updated the same day with the team's questionnaire answers and "no itch.io upload during M1" (living document: update it before the code when a decision changes). Background: [docs/PLAN.md](docs/PLAN.md), team questions: [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md), static examples: [examples/](examples/README.md).*
+*Status: approved October 19, 2026; updated the same day with the team's questionnaire answers and "no itch.io upload during M1"; updated November 2, 2026 with the lead's map-squares decisions (Beta-0.3: a grid of squares, travel decided by the DM; living document: update it before the code when a decision changes). Background: [docs/PLAN.md](docs/PLAN.md), team questions: [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md), static examples: [examples/](examples/README.md).*
 
 This file holds the **capability map** and everything the modules share. Each module has its own spec next to this file (`SPEC-<module id>.md`). The map, not the file names, is the index of what exists.
 
@@ -17,7 +17,7 @@ A solo RPG with an AI Dungeon Master. About **40% of the screen is the story** (
   - pixel art, top-down view, characters walk in 8 directions;
   - free placeholder art until the artist's files arrive;
   - turn-based fights with dice (D&D style), animated (M3);
-  - important places made by hand, the rest generated once and stored (M3).
+  - important places made by hand, the rest generated once and stored: since Beta-0.3 the world is a grid of big square maps, and the DM decides travel between them ([SPEC-map.md](SPEC-map.md)).
 
   Details and the questions still open are in [docs/PLAN.md](docs/PLAN.md#-team-answers-october-19-2026).
 
@@ -43,21 +43,22 @@ The module specs describe **behaviour, data formats and contracts** (state JSON,
 
 | Module id | What it does | Depends on | When | Spec |
 |---|---|---|---|---|
-| `core` | The single game state, rule checks, seeded dice, applying changes within limits. Later: Rewind snapshots, versioned saves + migrations, JSON export/import | — | M1, M2 | [SPEC-core.md](SPEC-core.md) |
-| `content` | Loads and checks the team's files (CSV, Markdown, art), looks things up by id, lists the ids the AI may use. EN + FR text | — | M1 | [SPEC-content.md](SPEC-content.md) |
+| `core` | The single game state, rule checks, seeded dice, applying changes within limits, travel between squares (state v2). Later: Rewind snapshots, versioned saves + migrations, JSON export/import | map (travel only) | M1, Beta-0.3, M2 | [SPEC-core.md](SPEC-core.md) |
+| `content` | Loads and checks the team's files (CSV, Markdown, art, map images), looks things up by id, lists the ids the AI may use. EN + FR text | — | M1, Beta-0.3 | [SPEC-content.md](SPEC-content.md) |
 | `narration` | Story text: typewriter, animated keywords (AI tags + word list), old entries stop animating, reduce motion | content | M1 | [SPEC-narration.md](SPEC-narration.md) |
-| `dm` | One AI turn: prompt, connection (copy-paste, own key; proxy client later), reply checks, story summary. **Owns the command list and the reply format** | core, content | M1 | [SPEC-dm.md](SPEC-dm.md) |
-| `world` | Animated scene: zone, walkable cells, click-to-move hero (8 directions), camera, named places, creatures, playing checked commands. Later: hand-made important places + generated areas stored in the save | content, dm (command list only) | M1, M3 | [SPEC-world.md](SPEC-world.md) |
-| `main-screen` | 40/60 layout, HUD, action box, the turn loop, settings. Later: Sheet/Pack/Quests/Codex tabs, autosave | core, content, narration, dm, world | M1, M2 | [SPEC-main-screen.md](SPEC-main-screen.md) |
+| `dm` | One AI turn: prompt (with the MAP part), connection (copy-paste, own key; proxy client later), reply checks (with `travel`), story summary. **Owns the command list and the reply format** | core, content, map | M1, Beta-0.3 | [SPEC-dm.md](SPEC-dm.md) |
+| `map` | The world grid: reads the world map and the hand-made squares, generates the other squares once (stored in the save), answers neighbours, exits and arrival tiles. Pure logic, no nodes | content (formats) | Beta-0.3 | [SPEC-map.md](SPEC-map.md) |
+| `world` | Animated scene: the current square drawn from its tiles, walkable cells, click-to-move hero (8 directions), camera, named places, creatures, playing checked commands, the fade between squares | content, map, dm (command list only) | M1, Beta-0.3, M3 | [SPEC-world.md](SPEC-world.md) |
+| `main-screen` | 40/60 layout, HUD, action box, the turn loop (and the automatic travel turn at an exit), settings. Later: Sheet/Pack/Quests/Codex tabs, autosave | core, content, narration, dm, map, world | M1, Beta-0.3, M2 | [SPEC-main-screen.md](SPEC-main-screen.md) |
 | `release` | Web build run locally, with a checklist and a build log. Later: private itch.io page, desktop builds, public page | main-screen | M1, M5 | [SPEC-release.md](SPEC-release.md) |
 | `proxy` | Server holding our API key, implementing the `dm` turn/summary contract | dm (contract) | M2 | *not yet* |
 | `combat` | Turn-based fights with dice (D&D style), animated and synced with the text | core, world, narration, dm | M3 | *not yet* |
 | `balance-tools` | Python content checker + fight simulator | content, core (formats) | M4 | *not yet* |
 | `audio` | Music and sound effects (optional) | main-screen | M5 | *not yet* |
 
-**Build order.** M1: `core` + `content` → `narration` + `dm` → `world` → `main-screen` → `release`. Then `proxy` (M2), `combat` (M3), `balance-tools` (M4), `audio` (M5).
+**Build order.** M1: `core` + `content` → `narration` + `dm` → `world` → `main-screen` → `release`. Beta-0.3 (lead, November 2, 2026): `map` → travel in `core` and `dm` → `world` and `main-screen`. Then `proxy` (M2), `combat` (M3), `balance-tools` (M4), `audio` (M5).
 
-**Contracts live with the provider.** The state shape is in `SPEC-core.md`, the content file formats in `SPEC-content.md`, the command list and AI reply format in `SPEC-dm.md`.
+**Contracts live with the provider.** The state shape is in `SPEC-core.md`, the content file formats in `SPEC-content.md`, the command list and AI reply format in `SPEC-dm.md`, the square grid, exits, arrival and generation rules in `SPEC-map.md`.
 
 **Cross-cutting: English + French from the start.**
 - `content` stores display text in both languages.
@@ -97,11 +98,13 @@ brasswake/
 │  │  ├─ content/         module content (loader + checks)
 │  │  ├─ narration/       module narration (+ effects/)
 │  │  ├─ dm/              module dm (+ connections/)
+│  │  ├─ map/             module map (world grid, square loading and generation)
 │  │  ├─ world/           module world (+ zones/, hero/, creatures/)
 │  │  └─ main_screen/     module main-screen
 │  ├─ content/            team files copied from OneDrive (code never writes here)
 │  │  ├─ data/            *.csv
 │  │  ├─ writing/         dm-rules.md, intro-*.md, places/, npcs/, lore/
+│  │  ├─ maps/            world.png, kinds.csv, tiles.csv, squares.csv, squares/*.png
 │  │  └─ art/             *.png, *.aseprite
 │  └─ tests/              automated tests + fixtures (saved AI replies)
 ├─ examples/              static examples: reference only, never shipped

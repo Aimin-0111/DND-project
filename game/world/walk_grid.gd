@@ -25,6 +25,16 @@ func _init(ground_layer: TileMapLayer, obstacles_layer: TileMapLayer = null) -> 
 			astar.set_point_solid(cell, blocked)
 
 
+## Makes the map's walkable tiles the rule for path-finding (one byte per
+## tile, row by row, 1 = walkable), so the hero walks exactly where the map
+## module says the tiles can be walked on.
+func apply_mask(mask: PackedByteArray, width: int) -> void:
+	for i in mask.size():
+		var cell := Vector2i(i % width, i / width)
+		if astar.is_in_boundsv(cell):
+			astar.set_point_solid(cell, mask[i] != 1)
+
+
 func cell_of(world_pos: Vector2) -> Vector2i:
 	return ground.local_to_map(ground.to_local(world_pos))
 

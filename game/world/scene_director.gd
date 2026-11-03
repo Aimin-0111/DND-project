@@ -1,6 +1,7 @@
 extends Node
 ## Runs the AI's already-validated orders in the world, one after another.
-## Commands arrive here only after DmReplyParser has accepted them.
+## Commands arrive here only after DmReplyParser has accepted them, and after
+## core applied them to the state.
 
 signal note(message: String)
 signal roll_requested(skill: String, dc: int)
@@ -9,6 +10,8 @@ signal moved_to(location_id: String)
 @export var hero: Node2D
 @export var creatures_root: Node2D
 @export var weather_tint: CanvasModulate
+## Set by the world: plays a travel (fade, new square, arrival). Awaited.
+var travel_player: Callable
 
 const CREATURE_SCENES := "res://world/creatures/%s.tscn"
 const WEATHER_COLORS := {
@@ -22,8 +25,15 @@ const WEATHER_COLORS := {
 
 
 func run(commands: Array) -> void:
+	# After a travel the new square is drawn from the state, which already
+	# holds this reply's spawns and despawns: they aren't played again.
+	var after_travel := false
 	for command in commands:
 		match str(command.get("type", "")):
+			"travel":
+				if travel_player.is_valid() and command.has("square"):
+					await travel_player.call(command)
+					after_travel = true
 			"move_to":
 				var location_id := str(command.get("target", ""))
 				var target := _location(location_id)
@@ -31,10 +41,11 @@ func run(commands: Array) -> void:
 					await hero.walk_to(target)
 					moved_to.emit(location_id)
 			"spawn":
-				if _creature_count() < GameState.MAX_CREATURES:
+				if not after_travel and _creature_count() < GameState.MAX_CREATURES:
 					_spawn(str(command.get("creature", "")), str(command.get("near", "")))
 			"despawn":
-				_despawn(str(command.get("creature", "")))
+				if not after_travel:
+					_despawn(str(command.get("creature", "")))
 			"weather":
 				_set_weather(str(command.get("kind", "clear")))
 			"emote":
@@ -53,23 +64,27 @@ func _location(id: String) -> Vector2:
 	return Vector2.INF
 
 
-## Rebuilds creatures and weather from the state, e.g. after loading a save.
+## Rebuilds the creatures of the hero's square and the weather from the
+## state, e.g. after loading a save or arriving in a square.
 func show_state(state: Dictionary) -> void:
 	for child in creatures_root.get_children():
 		creatures_root.remove_child(child)
 		child.queue_free()
+	var square := str(state.get("square", ""))
 	for creature in state.get("creatures", []):
-		_spawn(str(creature.get("id", "")), str(creature.get("near", "")), false)
+		if str(creature.get("square", "")) == square:
+			_spawn(str(creature.get("id", "")), str(creature.get("near", "")), false, creature.get("cell"))
 	_set_weather(str(state.get("weather", "clear")), false)
 
 
 ## The same creature id may appear twice; each node remembers its id.
-func _spawn(creature_id: String, near_id: String, announce: bool = true) -> void:
+## `cell`: the tile stored for a creature spawned near the hero.
+func _spawn(creature_id: String, near_id: String, announce: bool = true, cell: Variant = null) -> void:
 	var path := CREATURE_SCENES % creature_id
 	if not ResourceLoader.exists(path):
 		push_warning("SceneDirector: no scene for creature '%s'" % creature_id)
 		return
-	var near := _location(near_id)
+	var near := _near_position(near_id, cell)
 	if near == Vector2.INF:
 		return
 	var creature: Node2D = load(path).instantiate()
@@ -78,6 +93,16 @@ func _spawn(creature_id: String, near_id: String, announce: bool = true) -> void
 	creatures_root.add_child(creature)
 	if announce:
 		note.emit("%s: %s (%s)" % [Content.t("ui.spawned"), creature_id, near_id])
+
+
+## Where a creature appears: next to the hero, or near a place's marker.
+func _near_position(near_id: String, cell: Variant) -> Vector2:
+	if near_id != "hero":
+		return _location(near_id)
+	var spot: Vector2 = hero.global_position
+	if cell is Array and cell.size() == 2 and hero.grid != null:
+		spot = hero.grid.world_of(Vector2i(int(cell[0]), int(cell[1])))
+	return spot + Vector2(40, 0)
 
 
 ## Removes the most recently added creature with that id, like the state does.

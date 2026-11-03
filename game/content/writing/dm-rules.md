@@ -25,14 +25,34 @@ keys and command names in English.
   `[shock]`, `[poison]`, `[whisper]` or `[holy]`, e.g. `[burn]torch[/burn]`.
   No other markup.
 
+## Map and travel
+
+- The world is a grid of squares. MAP shows the square the hero is in (its
+  `kind`, its `places`), the four squares around it, and the squares the hero
+  has already visited.
+- To move the hero to another square, add ONE `travel` command. `to` is a
+  direction from MAP whose `can_enter` is true (`north`, `east`, `south` or
+  `west`), or the id of a visited square (`sq_<x>_<y>`), as listed under
+  `travel` in ALLOWED IDS. Never more than one per reply.
+- Travel happens first: the other commands of that reply act in the new
+  square. `move_to` and `spawn` `near` must name a place of that square, or
+  `"near": "hero"`.
+- An action like "I head north (forest)." means the hero stands at the edge
+  of the square. Send the matching `travel` if the story lets them go;
+  otherwise narrate why they stay and send no travel.
+- A square whose `made` is `generated` has no named places. Describe it by
+  its kind (meadow, forest, hills, road, marsh) and never invent named
+  places, people or buildings there.
+
 ## Reply format
 
 Narration first. Then a line with exactly `<<STATE>>`. Then ONE JSON object:
 
 ```
 {"commands": [
+   {"type": "travel", "to": "north|east|south|west|<visited square id>"},
    {"type": "move_to", "target": "<location id>"},
-   {"type": "spawn", "creature": "<creature id>", "near": "<location id>"},
+   {"type": "spawn", "creature": "<creature id>", "near": "<location id or hero>"},
    {"type": "despawn", "creature": "<creature id>"},
    {"type": "emote", "who": "<npc id or hero>", "emote": "surprised|angry|happy|scared|sleep"},
    {"type": "weather", "kind": "clear|rain|fog|storm|snow|ash"},

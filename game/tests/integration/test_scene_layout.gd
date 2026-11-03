@@ -31,8 +31,8 @@ func run() -> Array:
 
 	var world = main.get_node("Split/WorldView/SubViewport/World")
 	var ground: TileMapLayer = world.get_node("Ground")
-	if ground.get_used_rect().size != Vector2i(24, 22):
-		failures.append("world tile map should be 24x22, got %s" % str(ground.get_used_rect().size))
+	if ground.get_used_rect().size != Vector2i(64, 64):
+		failures.append("world tile map should be one 64x64 square, got %s" % str(ground.get_used_rect().size))
 
 	var hero = world.get_node("Hero")
 	if hero.grid == null:

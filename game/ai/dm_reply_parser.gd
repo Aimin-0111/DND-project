@@ -7,6 +7,7 @@ extends RefCounted
 const MARKER := "<<STATE>>"
 const MAX_COMMANDS := 5
 const COMMANDS := {
+	"travel": {"to": TYPE_STRING},
 	"move_to": {"target": TYPE_STRING},
 	"spawn": {"creature": TYPE_STRING, "near": TYPE_STRING},
 	"despawn": {"creature": TYPE_STRING},
@@ -14,6 +15,7 @@ const COMMANDS := {
 	"weather": {"kind": TYPE_STRING},
 	"request_roll": {"skill": TYPE_STRING, "dc": TYPE_FLOAT},
 }
+const DIRECTIONS := ["north", "east", "south", "west"]
 const WEATHER := ["clear", "rain", "fog", "storm", "snow", "ash"]
 const EMOTES := ["surprised", "angry", "happy", "scared", "sleep"]
 const LIMITS := {
@@ -26,6 +28,9 @@ const CHANGE_KEYS := ["hp_delta", "gold_delta", "time_advance_minutes", "add_ite
 
 
 ## Returns {"narration": String, "commands": Array, "state": Dictionary, "errors": Array}
+## With a map view (allowed["map"], allowed["travel"]), at most one travel is
+## kept and put first, and move_to / spawn near are checked against the places
+## of the square the hero ends up in. Without one, the M1 checks apply.
 static func parse(reply: String, allowed: Dictionary) -> Dictionary:
 	var out := {"narration": reply.strip_edges(), "commands": [], "state": {}, "errors": []}
 	var at := reply.find(MARKER)
@@ -46,12 +51,7 @@ static func parse(reply: String, allowed: Dictionary) -> Dictionary:
 	if commands is Array:
 		if commands.size() > MAX_COMMANDS:
 			out["errors"].append("Too many commands: %d (max %d)." % [commands.size(), MAX_COMMANDS])
-		for command in commands.slice(0, MAX_COMMANDS):
-			var problem := _check_command(command, allowed)
-			if problem.is_empty():
-				out["commands"].append(command)
-			else:
-				out["errors"].append(problem)
+		out["commands"] = _check_commands(commands.slice(0, MAX_COMMANDS), allowed, out["errors"])
 	elif data.has("commands"):
 		out["errors"].append("commands must be an array.")
 
@@ -72,21 +72,78 @@ static func _extract_json(text: String) -> String:
 	return text.substr(start, end - start + 1)
 
 
-static func _check_command(command: Variant, allowed: Dictionary) -> String:
+## Travel first: the first valid travel is kept (rebuilt with only its type
+## and "to") and put at the front; the other commands are checked against
+## the square the hero ends up in.
+static func _check_commands(commands: Array, allowed: Dictionary, errors: Array) -> Array:
+	var travel := {}
+	for command in commands:
+		if not (command is Dictionary) or command.get("type") != "travel":
+			continue
+		var problem := _check_command(command, allowed, null)
+		if problem.is_empty() and not travel.is_empty():
+			problem = "travel: only one per reply, '%s' dropped." % command["to"]
+		if problem.is_empty():
+			travel = {"type": "travel", "to": command["to"]}
+		else:
+			errors.append(problem)
+	var kept: Array = [] if travel.is_empty() else [travel]
+	var places: Variant = _places_after(travel, allowed)
+	for command in commands:
+		if command is Dictionary and command.get("type") == "travel":
+			continue
+		var problem := _check_command(command, allowed, places)
+		if problem.is_empty():
+			kept.append(command)
+		else:
+			errors.append(problem)
+	return kept
+
+
+## The places of the square the hero will be in after this reply's travel
+## (the current square without one), or null when there is no map view.
+static func _places_after(travel: Dictionary, allowed: Dictionary) -> Variant:
+	var view: Variant = allowed.get("map")
+	if not (view is Dictionary):
+		return null
+	if travel.is_empty():
+		return view.get("places", [])
+	var to := str(travel["to"])
+	if to in DIRECTIONS:
+		return view.get("neighbours", {}).get(to, {}).get("places", [])
+	for entry in view.get("visited", []):
+		if entry is Dictionary and entry.get("square") == to:
+			return entry.get("places", [])
+	return []
+
+
+## `places`: the place ids move_to and spawn may name, or null for the M1
+## check against every allowed location.
+static func _check_command(command: Variant, allowed: Dictionary, places: Variant) -> String:
 	if not (command is Dictionary) or not COMMANDS.has(command.get("type", "")):
 		return "Unknown command: %s" % str(command)
 	var fields: Dictionary = COMMANDS[command["type"]]
 	for field in fields:
 		if typeof(command.get(field)) != fields[field]:
 			return "%s: missing or wrong '%s'" % [command["type"], field]
+	var here: Array = places if places is Array else allowed.get("locations", [])
 	match command["type"]:
+		"travel":
+			if not command["to"] in allowed.get("travel", []):
+				if command["to"] in DIRECTIONS:
+					return "travel: the hero can't go %s from here" % command["to"]
+				return "travel: '%s' is not another square the hero has visited" % command["to"]
 		"move_to":
-			if not command["target"] in allowed.get("locations", []):
+			if not command["target"] in here:
+				if places is Array and command["target"] in allowed.get("locations", []):
+					return "move_to: '%s' is not in this square" % command["target"]
 				return "move_to: unknown place '%s'" % command["target"]
 		"spawn":
 			if not command["creature"] in allowed.get("creatures", []):
 				return "spawn: unknown creature '%s'" % command["creature"]
-			if not command["near"] in allowed.get("locations", []):
+			if command["near"] != "hero" and not command["near"] in here:
+				if places is Array and command["near"] in allowed.get("locations", []):
+					return "spawn: '%s' is not in this square" % command["near"]
 				return "spawn: unknown place '%s'" % command["near"]
 		"despawn":
 			if not command["creature"] in allowed.get("creatures", []):
