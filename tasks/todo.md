@@ -236,9 +236,11 @@ It uses `keywords(lang)` from content.
 Copy the 8 Haiku replies into the fixtures and write one crafted bad reply per SPEC-dm case.
 
 **Acceptance criteria:**
-- [ ] The 8 Haiku replies pass with nothing dropped, and the kept commands match RESULTS.md (S3, S4, S5, S8 as listed in SPEC-dm; S1, S2, S6, S7 empty).
-- [ ] Every crafted bad reply gives its expected result (dropped, clamped or narration only).
-- [ ] The checker never fails on any input (empty text, binary junk, 1 MB of text).
+- [x] The 8 Haiku replies pass with nothing dropped, and the kept commands match RESULTS.md (S3, S4, S5, S8 as listed in SPEC-dm; S1, S2, S6, S7 empty).
+- [x] Every crafted bad reply gives its expected result (dropped, clamped or narration only).
+- [x] The checker never fails on any input (empty text, binary junk, 1 MB of text).
+
+**Status (2026-11-03, branch `Beta-0.3-reply-tests`):** the three criteria pass on `game/ai/dm_reply_parser.gd` (Godot 4.7.2, Linux). The tests are `game/tests/unit/test_archived_replies.gd` and `test_bad_replies.gd`; the fixtures are in `game/tests/fixtures/replies/` (S1–S8) and `replies/bad/`. The tests also found four parser problems (wrong results, not crashes): see "Found by the tests" in [docs/m1-ai-tests.md](../docs/m1-ai-tests.md). Still to do: the move to `src/dm/reply_checker.gd`.
 
 **Verification:** tests command.
 
