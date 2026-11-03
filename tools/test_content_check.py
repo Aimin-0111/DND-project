@@ -147,6 +147,77 @@ class MapCheckTest(unittest.TestCase):
         problems, _ = self.run_check()
         self.assert_reported(problems, "kinds.csv:4", "#8fd16a is already used by 'meadow'")
 
+    def test_bad_colour_and_flag(self) -> None:
+        self.edit("maps/tiles.csv", "sand,#e8d49a,true,ground,8", "sand,e8d49a,maybe,ground,8")
+        self.edit("maps/kinds.csv", "marsh,#6f8f6a,true", "marsh,#6f8f6a,oui")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "tiles.csv:10", "must look like #4c9a3c")
+        self.assert_reported(problems, "kinds.csv:6", "passable must be true or false")
+
+    def test_duplicate_tile_id_and_bad_layer(self) -> None:
+        self.edit("maps/tiles.csv", "sand,#e8d49a,true,ground,8", "grass,#e8d49a,true,floor,8")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "tiles.csv:10", "duplicate id 'grass'")
+        self.assert_reported(problems, "tiles.csv:10", "layer must be ground or obstacle")
+
+    def test_hand_made_square_rows(self) -> None:
+        shutil.copy(self.content / "maps/squares/mill-road.png", self.content / "maps/squares/second.png")
+        self.edit("maps/squares.csv", "mill-road.png,24,24,road\n",
+                  "mill-road.png,24,24,road\nsecond.png,24,24,road\nMill Road.png,3,3,road\nmissing.png,5,5,lake\n")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "squares.csv:3", "two hand-made squares at (24, 24)")
+        self.assert_reported(problems, "squares.csv:4", "'Mill Road.png' must be a .png named with")
+        self.assert_reported(problems, "squares.csv:5", "kind 'lake' must be a kind from kinds.csv that can be entered")
+        self.assert_reported(problems, "missing.png")
+
+    def test_unlisted_square_image_is_a_warning(self) -> None:
+        shutil.copy(self.content / "maps/squares/mill-road.png", self.content / "maps/squares/spare.png")
+        problems, warnings = self.run_check()
+        self.assertEqual(problems, [])
+        self.assert_reported(warnings, "spare.png", "not listed in squares.csv")
+
+    def test_tileset_size(self) -> None:
+        write_png(self.content / "art/tiles-placeholder.png", 100, 64, [[(0, 0, 0, 0)] * 100] * 64)
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "tiles-placeholder.png", "100 x 64 is not a whole number of 32 px tiles")
+
+    def test_missing_world_map(self) -> None:
+        (self.content / "maps/world.png").unlink()
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "missing file", "world.png")
+
+    def test_missing_columns(self) -> None:
+        self.edit("maps/tiles.csv", "id,colour,walkable,layer,tileset_index", "id,colour,walkable,tileset_index")
+        self.edit("data/locations.csv", "id,square,x,y", "id,x,y")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "tiles.csv", "missing columns ['layer']")
+        self.assert_reported(problems, "locations.csv", "missing columns ['square']")
+
+    def test_bad_ids_and_numbers(self) -> None:
+        self.edit("maps/tiles.csv", "dirt,#9a7148,true,ground,11", "Dirt,#9a7148,true,ground,eleven")
+        self.edit("maps/tiles.csv", "mud,#6e5f3a,true,ground,12", "mud,#4c9a3c,true,ground,12")
+        self.edit("maps/kinds.csv", "hills,#b08a4f,true", "Hills!,#b08a4f,true")
+        self.edit("maps/squares.csv", "mill-road.png,24,24,road\n", "mill-road.png,24,24,road\nmill-road.png,-1,2,road\n")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "tiles.csv:13", "id 'Dirt' must match")
+        self.assert_reported(problems, "tiles.csv:14", "#4c9a3c is already used by 'grass'")
+        self.assert_reported(problems, "kinds.csv:4", "id 'Hills!' must match")
+        self.assert_reported(problems, "squares.csv:3", "x and y must be whole numbers")
+        self.edit("maps/tiles.csv", "Dirt,#9a7148,true,ground,eleven", "dirt,#9a7148,true,ground,eleven")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "tiles.csv:13", "tileset_index must be a whole number, got 'eleven'")
+
+    def test_handmade_kind_missing(self) -> None:
+        self.edit("maps/kinds.csv", "handmade,#ff00ff,true\n", "")
+        problems, _ = self.run_check()
+        self.assert_reported(problems, "kinds.csv", "'handmade'", "must exist")
+        self.assert_reported(problems, "world.png", "unknown colour #ff00ff at (24, 24)")
+
+    def test_very_large_world_is_a_warning(self) -> None:
+        write_png(self.content / "maps/world.png", 1100, 1, [[(0x8f, 0xd1, 0x6a)] * 1100], alpha=False)
+        _, warnings = self.run_check()
+        self.assert_reported(warnings, "world.png", "1100 x 1 squares is very large")
+
 
 if __name__ == "__main__":
     unittest.main()

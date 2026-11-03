@@ -611,7 +611,7 @@ Also `sync_from_state` at game start, a generic creature scene that takes its sp
 
 *Added November 3, 2026 from the lead's decisions of November 2 (a grid of big square maps; the DM decides travel). Specs: [SPEC-map.md](../SPEC-map.md), and the Beta-0.3 parts of SPEC-world, SPEC-core, SPEC-dm, SPEC-content and SPEC-main-screen. Built on the `Beta-0.2` code (`game/ai/`, `game/core/`… rather than `game/src/`), on branch `Beta-0.3-map-squares`. Tests: `"$GODOT" --headless --path game --script res://tests/run_tests.gd` (count any `SCRIPT ERROR` as a failure), then `python tools/content_check.py --check --langs fr,en`.*
 
-### - [ ] Task 27: Map files and placeholder art
+### - [x] Task 27: Map files and placeholder art
 
 **Description:** Create the map content in `content/maps/`:
 - `kinds.csv` (the 7 starter kinds + `handmade`), `tiles.csv` (one row per tile of the tileset), `squares.csv` (the start square);
@@ -623,9 +623,9 @@ Also `sync_from_state` at game start, a generic creature scene that takes its sp
 The images are made by a standard-library Python script (`tools/make_placeholder_maps.py`); the PNGs are imported as Image; `art/CREDITS.md` is updated.
 
 **Acceptance criteria:**
-- [ ] The content check passes on the new files.
-- [ ] `world.png` has every starter kind, a road through the start square, and the start square in magenta.
-- [ ] The start square has exits in the middle of its four edges, facing squares the hero can enter.
+- [x] The content check passes on the new files.
+- [x] `world.png` has every starter kind, a road through the start square, and the start square in magenta.
+- [x] The start square has exits in the middle of its four edges, facing squares the hero can enter.
 
 **Verification:** content check; open the PNGs (zoomed) and look.
 
@@ -635,16 +635,16 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 
 **Scope:** M
 
-### - [ ] Task 28: Map loader and map checks
+### - [x] Task 28: Map loader and map checks
 
 **Description:**
 - **Loader:** `map/map_loader.gd` reads the map files into a `WorldMap` (`map/world_map.gd`) and a `TileTable` (`map/tile_table.gd`). Problems are collected with the file and pixel position; the game keeps running.
 - **Content check:** `tools/content_check.py` (standard library only, its own PNG reader) reports unknown colours with the pixel position, wrong image sizes, markers outside their square or on blocked tiles, hand-made squares off the world map, and exits facing a square the hero can't enter (a warning).
 
 **Acceptance criteria:**
-- [ ] The real files load with no problems; ids `sq_<x>_<y>` round-trip and malformed ids are refused.
-- [ ] A crafted image with an unknown colour is reported with its position, in the game and in the content check.
-- [ ] Each new content check fires on a crafted bad copy of the content.
+- [x] The real files load with no problems; ids `sq_<x>_<y>` round-trip and malformed ids are refused.
+- [x] A crafted image with an unknown colour is reported with its position, in the game and in the content check.
+- [x] Each new content check fires on a crafted bad copy of the content.
 
 **Verification:** tests command; content check on the real files and on crafted copies.
 
@@ -654,14 +654,14 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 
 **Scope:** M
 
-### - [ ] Task 29: Square generator
+### - [x] Task 29: Square generator
 
 **Description:** `map/square_generator.gd` and `map/square_grid.gd`: generate a square from the seed, its coordinates, its kind and its neighbours' kinds (border blocked, the middle of each edge facing an enterable square open, paths from each opening to the centre, roads joining road and hand-made neighbours); plus exits, arrival and step-back geometry.
 
 **Acceptance criteria:**
-- [ ] The same inputs give the same tiles; generation doesn't touch the dice.
-- [ ] Over many seeds and every kind: every open exit reaches every other one; closed edges are closed; open edges are walkable exactly on cells 30–33; corners are blocked.
-- [ ] A road square's path reaches each edge facing a road or hand-made square.
+- [x] The same inputs give the same tiles; generation doesn't touch the dice.
+- [x] Over many seeds and every kind: every open exit reaches every other one; closed edges are closed; open edges are walkable exactly on cells 30–33; corners are blocked.
+- [x] A road square's path reaches each edge facing a road or hand-made square.
 
 **Verification:** tests command.
 
@@ -671,13 +671,13 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 
 **Scope:** M
 
-### - [ ] Task 30: State v2 and travel in core
+### - [x] Task 30: State v2 and travel in core
 
 **Description:** State version 2 (`square`, `hero_cell`, `squares`, creatures with a `square`), the v1 → v2 migration, and `core/world_state.gd`: travel, `set_hero_cell`, `settle` and stored tiles. `apply_commands` gets the map and applies `travel` first; `move_to`, `spawn` and `despawn` act in the current square.
 
 **Acceptance criteria:**
-- [ ] Every SPEC-core Beta-0.3 criterion has a passing test, including a Beta-0.2 save loading.
-- [ ] Creatures stay behind in their square; the creature limit counts one square.
+- [x] Every SPEC-core Beta-0.3 criterion has a passing test, including a Beta-0.2 save loading.
+- [x] Creatures stay behind in their square; the creature limit counts one square.
 
 **Verification:** tests command.
 
@@ -692,8 +692,8 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 **Description:** Add `travel` to the reply checks (at most one, direction or visited id, played first, other commands checked against the destination), the MAP part to the prompt (through `Game.allowed_ids()`, without touching `autoload/dm.gd`), and the travel lines to `dm-rules.md`.
 
 **Acceptance criteria:**
-- [ ] Every SPEC-dm Beta-0.3 criterion has a passing test.
-- [ ] The old fixtures (S1, S6, S8) and the M1 parser tests still pass unchanged.
+- [x] Every SPEC-dm Beta-0.3 criterion has a passing test.
+- [x] The old fixtures (S1, S6, S8) and the M1 parser tests still pass unchanged.
 - [ ] S1, S8 and one exit turn rerun through the real game with the new rules (lead, copy-paste mode).
 
 **Verification:** tests command; the reruns are manual.
@@ -710,7 +710,7 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 
 **Acceptance criteria:**
 - [ ] SPEC-world Beta-0.3 criteria: the automated ones pass; the manual ones are checked by the lead.
-- [ ] Loading a save restores the square, the hero's tile and that square's creatures.
+- [x] Loading a save restores the square, the hero's tile and that square's creatures.
 
 **Verification:** tests command; manual in the editor.
 
@@ -741,7 +741,7 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 
 **Acceptance criteria:**
 - [ ] The artist can draw a new hand-made square from the guide alone (the lead checks).
-- [ ] The notes list exactly what was checked and what the lead must try by hand.
+- [x] The notes list exactly what was checked and what the lead must try by hand.
 
 **Verification:** read both files.
 
@@ -751,7 +751,9 @@ The images are made by a standard-library Python script (`tools/make_placeholder
 
 **Scope:** S
 
+**Status (November 3, 2026):** ticked items were verified by running the tests, the content check and a scripted play-through (see [docs/BETA-0.3-MAP-SQUARES.md](../docs/BETA-0.3-MAP-SQUARES.md)). The open ones need the lead (manual checks, real AI turns) or the artist.
+
 ### Checkpoint: Beta-0.3
-- [ ] All tests and the content check pass.
+- [x] All tests and the content check pass.
 - [ ] The lead walks across several squares, sees the fade, and tries the paste window at an exit (cancel once, travel once).
 - [ ] The artist and the writer have heard about the files that concern them (see the notes).
