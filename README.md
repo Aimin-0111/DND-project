@@ -5,7 +5,7 @@
 > **État au 19 octobre 2026 : aucune version jouable.**
 > Le [spec](SPEC.md) et le [plan M1](tasks/plan.md) sont approuvés. Le projet Godot sera créé à la tâche 1 de [tasks/todo.md](tasks/todo.md).
 >
-> **Branche `Beta-0.2` : une version locale jouable.** Elle combine `main` et la tranche M1 d'Alban (`Beta-0.1`), avec les corrections de la relecture et les réponses déjà données au questionnaire. Les questions encore ouvertes ont une valeur par défaut. Détails : [docs/BETA-0.2.md](docs/BETA-0.2.md). Elle n'est pas fusionnée dans `main`.
+> **Branche `Beta-0.3` : une version locale jouable.** Elle ajoute à `Beta-0.2` la carte en carrés (le MJ décide des voyages), trois effets animés de plus, les tests des réponses de l'IA et le mode clé personnelle. Détails : [docs/BETA-0.3.md](docs/BETA-0.3.md), et [docs/BETA-0.2.md](docs/BETA-0.2.md) pour la base. Elle n'est pas fusionnée dans `main`.
 
 ---
 
@@ -278,6 +278,13 @@ Dossiers prévus par le spec mais **absents** aujourd'hui : `game/` (projet Godo
   - L'état garde la météo et les créatures.
   - Langue choisie au premier lancement ; marche en 8 directions ; preset d'export Web.
   - 14 fichiers de tests passent. Non fusionnée dans `main` ; voir [docs/BETA-0.2.md](docs/BETA-0.2.md).
+- **2 novembre 2026** — Branche `Beta-0.3` : `Beta-0.2` + quatre branches faites par des sessions cloud.
+  - Le monde devient une grille de carrés de 64 × 64 cases (`world.png`, 1 pixel = 1 carré). Les carrés sont faits à la main ou générés, puis gardés dans la sauvegarde. Le MJ décide des voyages avec la commande `travel`.
+  - Les effets poison, murmure et sacré sont animés.
+  - Les tests couvrent les 8 réponses Haiku, 14 mauvaises réponses et des réponses aléatoires.
+  - Mode clé personnelle (tâche 17), réglé derrière une roue dentée. Le copier-coller reste le mode par défaut.
+  - Corrigé pendant la fusion : une commande dont le `type` n'était pas du texte faisait perdre toutes les commandes de la réponse.
+  - 24 fichiers de tests passent. Non fusionnée dans `main` ; voir [docs/BETA-0.3.md](docs/BETA-0.3.md).
 
 ---
 
@@ -291,6 +298,10 @@ Dossiers prévus par le spec mais **absents** aujourd'hui : `game/` (projet Godo
 | [docs/PLAN.md](docs/PLAN.md) | Vision, décisions, jalons, rôles, réponses de l'équipe |
 | [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md) | Les 23 questions à trancher en équipe |
 | [docs/BETA-0.2.md](docs/BETA-0.2.md) | Branche `Beta-0.2` : changements, réponses appliquées, valeurs par défaut |
+| [docs/BETA-0.3.md](docs/BETA-0.3.md) | Branche `Beta-0.3` : ce qui a été fusionné, ce qu'il faut vérifier à la main |
+| [docs/BETA-0.3-MAP-SQUARES.md](docs/BETA-0.3-MAP-SQUARES.md) | La carte en carrés : décisions, valeurs par défaut, questions ouvertes |
+| [docs/GUIDE-CARTES.md](docs/GUIDE-CARTES.md) | Guide de l'artiste : dessiner la carte du monde et les carrés |
+| [docs/OWN-KEY.md](docs/OWN-KEY.md) | Mode clé personnelle : utilisation, sécurité, vérifications restantes |
 | [examples/README.md](examples/README.md) | Carte des exemples et options comparées |
 | [examples/interface/mockups.html](examples/interface/mockups.html) | Maquettes visuelles (à ouvrir dans un navigateur) |
 | [examples/godot/scene_tree.md](examples/godot/scene_tree.md) | Structure de scène et flux d'un tour |
