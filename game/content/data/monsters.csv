@@ -1,0 +1,2 @@
+id,level,hp,ac,attack_bonus,damage,xp
+rust_wolf,1,11,13,4,2d4+2,50

@@ -6,7 +6,8 @@
 
 ## 0. TL;DR
 
-- **Le spec et le plan M1 sont approuvés, le jeu n'existe pas encore.** Il n'y a ni `game/`, ni scène Godot, ni build jouable. Prochaine étape : la tâche 1 de [tasks/todo.md](tasks/todo.md).
+- **Le spec et le plan M1 sont approuvés, le jeu n'existe pas encore sur `main`.** Il n'y a ni `game/`, ni scène Godot, ni build jouable. Prochaine étape : la tâche 1 de [tasks/todo.md](tasks/todo.md).
+- **Sur la branche `Beta-0.3`, `game/` existe** (`Beta-0.2` + carte en carrés, effets, tests des réponses, mode clé personnelle). Tests : `"$GODOT" --headless --path game --script res://tests/run_tests.gd` → `PASS: 24 test file(s)`, sans ligne `SCRIPT ERROR`. Notes : [docs/BETA-0.3.md](docs/BETA-0.3.md) ; ce qui diffère encore du spec : [docs/BETA-0.2.md](docs/BETA-0.2.md).
 - **Cible proposée :** Godot 4 (GDScript) + proxy Cloudflare Workers (M2) ; itch.io après M1. Godot sera confirmé ou rejeté par le prototype M1 ; repli : TypeScript + Phaser 4.
 - **Pendant M1, pas d'envoi sur itch.io :** les builds web se jouent en local (`localhost`).
 - **Le dépôt est public.** Aucun secret, jamais.
@@ -121,9 +122,9 @@ La passerelle gémit sous vos pas...
  "state": {"gold_delta": 5, "time_advance_minutes": 10}}
 ```
 
-- **Commandes autorisées :** `move_to`, `spawn`, `despawn`, `emote`, `weather`, `request_roll`. Maximum 5.
+- **Commandes autorisées :** `move_to`, `spawn`, `despawn`, `emote`, `weather`, `request_roll`, et `travel` depuis Beta-0.3 (une seule par réponse, jouée en premier ; voir [SPEC-map.md](SPEC-map.md)). Maximum 5.
 - **Bornes :** `hp_delta` −30…+30, `gold_delta` −200…+200, `time_advance_minutes` 0…1440, `add_items` 3 au plus ; `dc` entier de 5 à 30 ; `emote.who` = `hero` ou un PNJ autorisé. Hors bornes : ramené dans les bornes et noté, ou ignoré.
-- **Identifiants :** uniquement ceux de la liste `ALLOWED IDS` (lieux, créatures, objets, quêtes, PNJ, compétences).
+- **Identifiants :** uniquement ceux de la liste `ALLOWED IDS` (lieux, créatures, objets, quêtes, PNJ, compétences, destinations de `travel`).
 - **État :** `hp_delta`, `gold_delta`, `time_advance_minutes`, `add_items`, `quest_updates`.
 - **Effets :** `burn`, `freeze`, `shock`, `poison`, `whisper`, `holy`. Au plus 4 tags de l'IA par entrée (30 caractères au plus dans un tag), et 6 mots animés au total avec la liste de mots. Un tag mal fermé ou imbriqué s'affiche tel quel.
 - Le parseur rejette ou ignore tout ce qui est inconnu ou hors bornes. Ne jamais assouplir ces contrôles pour « faire passer » une réponse.
@@ -132,7 +133,7 @@ La passerelle gémit sous vos pas...
 
 ### 6.2 État et sauvegardes ([SPEC-core.md](SPEC-core.md))
 
-- Un seul `Dictionary` sérialisable, avec `version`. L'**état v1** ajoute `weather`, `creatures` (6 au plus) et `last_roll`.
+- Un seul `Dictionary` sérialisable, avec `version`. L'**état v1** ajoute `weather`, `creatures` (6 au plus) et `last_roll`. L'**état v2** (Beta-0.3) ajoute `square`, `hero_cell`, `squares` (les carrés visités) et un `square` par créature (6 au plus par carré) ; la migration v1 → v2 charge les sauvegardes de Beta-0.2.
 - On ne change l'état que par `core` : `apply_changes`, puis `apply_commands` (qui vide d'abord `last_roll`). Les jets de M1 se font tout de suite ; l'IA raconte le résultat au tour suivant.
 - Sauvegardes (M2) : JSON dans `user://saves/` (IndexedDB dans le build web). M1 n'a pas de sauvegarde.
 - Une fonction `_vN_to_vN+1()` par changement de forme ; test de chargement obligatoire.
@@ -156,24 +157,26 @@ CSV en UTF-8, séparateur `,` ou `;` (Excel en français). Colonnes du spec :
 - Noms de fichiers d'art : préfixes `tiles-`, `hero-`, `creature-`, `npc-`, `item-`, `fx-` ; animations en 8 directions, avec des lignes facultatives et un repli (voir [GUIDE-ARTISTE.md](examples/content/art/GUIDE-ARTISTE.md)).
 - Modèles d'écriture : [pnj-modele.md](examples/content/writing/pnj-modele.md), [lieu-modele.md](examples/content/writing/lieu-modele.md).
 - Le code lit ces fichiers ; il ne les remplace pas par des constantes. `game/content/` appartient à l'équipe : prévenir avant d'y modifier un fichier.
+- Cartes (Beta-0.3) : `game/content/maps/` (`world.png`, `kinds.csv`, `tiles.csv`, `squares.csv`, `squares/*.png`) et les colonnes `square`, `x`, `y` de `locations.csv`. Formats : [SPEC-content.md](SPEC-content.md) ; guide de l'artiste : [docs/GUIDE-CARTES.md](docs/GUIDE-CARTES.md).
 
 ### 6.4 Prompt et modes IA ([SPEC-dm.md](SPEC-dm.md))
 
-Ordre stable → variable, en 7 parties :
+Ordre stable → variable, en 8 parties depuis Beta-0.3 :
 1. règles du MJ + une ligne de langue ;
 2. codex ;
 3. histoire jusqu'ici ;
 4. vue de l'état ;
-5. identifiants autorisés ;
-6. dernier jet ;
-7. action du joueur.
+5. carte (`MAP`) : le carré du héros, ses voisins, les carrés visités ;
+6. identifiants autorisés ;
+7. dernier jet ;
+8. action du joueur.
 
 - M1 : copier-coller et clé personnelle. Le proxy arrive en M2.
 - Le mode copier-coller est le défaut gratuit ; il doit rester intact.
 - Le proxy ne reçoit que des données de jeu, jamais les règles ni un choix de modèle : le Worker décide.
 - La clé personnelle est stockée localement (`user://settings.cfg`), jamais livrée avec le jeu.
 - « Histoire jusqu'ici » en M1 : l'intro + les 3 dernières narrations (600 caractères chacune au plus). En M2, un résumé glissant rafraîchi sur un petit modèle.
-- Jamais envoyés : `seed`, `rng_state`, `log`, les réglages, la clé.
+- Jamais envoyés : `seed`, `rng_state`, `log`, les cases des carrés, `hero_cell`, les réglages, la clé.
 - Toute modification de `dm-rules.md` doit être suivie d'un test des scénarios pièges.
 
 ### 6.5 Scène et interface ([SPEC-main-screen.md](SPEC-main-screen.md), [SPEC-world.md](SPEC-world.md))
@@ -183,6 +186,7 @@ Ordre stable → variable, en 7 parties :
 - Autoloads : `Game`, `Content`, `DM`, sans règles dedans.
 - La boucle de tour suit l'ordre en 11 étapes de `SPEC-main-screen.md`. Pendant un tour, l'action et les déplacements sont bloqués.
 - Monde M1 : la zone du chemin du moulin, en vue de dessus. Le héros va là où on clique, en 8 directions, avec repli si l'art manque.
+- Beta-0.3 : le monde est une grille de carrés de 64 × 64 cases ([SPEC-map.md](SPEC-map.md)). Un seul carré est dessiné à la fois. Une marche qui finit sur une sortie envoie le tour au MJ, qui décide du voyage.
 - Le monde et le panneau doivent rester séparés ; l'UI ne contient pas de règles.
 
 ## 7. Conventions de code

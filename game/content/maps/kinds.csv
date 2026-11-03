@@ -1,0 +1,9 @@
+id,colour,passable
+meadow,#8fd16a,true
+forest,#1f6b2e,true
+hills,#b08a4f,true
+road,#e8c27a,true
+marsh,#6f8f6a,true
+lake,#3a7bd5,false
+mountain,#7a7a7a,false
+handmade,#ff00ff,true

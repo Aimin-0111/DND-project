@@ -1,0 +1,4 @@
+On the hill, the wizard of the tower waves at you. Oda shakes her head and keeps walking toward the mill.
+<<STATE>>
+{"commands": [{"type": "emote", "who": "tower_wizard", "emote": "happy"}, {"type": "emote", "who": "oda_miller", "emote": "angry"}],
+ "state": {}}

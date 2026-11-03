@@ -1,0 +1,11 @@
+[remap]
+
+importer="keep"
+type=""
+uid="uid://cmmwt0x5occde"
+
+[deps]
+
+source_file="res://content/data/monsters.csv"
+
+[params]

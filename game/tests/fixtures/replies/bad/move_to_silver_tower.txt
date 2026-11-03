@@ -1,0 +1,4 @@
+You leave the road and climb toward the Silver Tower, its spire bright above the pines. Behind you, Oda mutters that you promised her the mill first.
+<<STATE>>
+{"commands": [{"type": "move_to", "target": "silver_tower"}, {"type": "emote", "who": "oda_miller", "emote": "angry"}],
+ "state": {"time_advance_minutes": 30}}

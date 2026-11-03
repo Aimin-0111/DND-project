@@ -1,6 +1,6 @@
 # Spec: `main-screen` (layout and the turn loop)
 
-*Module of [SPEC.md](SPEC.md). Depends on: `core`, `content`, `narration`, `dm`, `world`. Used by: `release`. When: M1 (layout, turn loop, minimal settings), M2 (tabs, autosave, Rewind, more settings).*
+*Module of [SPEC.md](SPEC.md). Depends on: `core`, `content`, `narration`, `dm`, `map`, `world`. Used by: `release`. When: M1 (layout, turn loop, minimal settings), Beta-0.3 (exits send the automatic travel turn), M2 (tabs, autosave, Rewind, more settings).*
 
 ## Objective
 
@@ -23,7 +23,7 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 ```
 
 - **Width ratio** 6:4. Target windows 1280×720 and 1920×1080; minimum 1024×600.
-- **HUD** over the world: HP, gold, clock text, current place name (all in the current language).
+- **HUD** over the world: HP, gold, clock text, current place name (all in the current language). Beta-0.3: between places, and in generated squares, the place label shows the square's kind instead ("Forest" / "Forêt", from `kind.<id>.name`).
 - **Action bar** under the story: text box ("What do you do?" / "Que fais-tu ?"), Act button, settings button, AI mode indicator. A status line above it shows messages like "The DM is thinking…".
 - Portrait / phone layout (option B): M2 or later, depending on the team's answer to Q1.
 
@@ -46,6 +46,19 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 
 - `dm` errors (dropped commands, clamped numbers) go to the debug log, not to the player.
 - Only one turn can run at a time.
+- Beta-0.3: before step 4 the hero's tile is stored in the state; after step 10 the state takes the tile the hero really ended on (a `move_to` can stop short of an unreachable marker).
+
+## Exits: the automatic travel turn
+
+Beta-0.3, decided by the lead on November 2, 2026. The DM decides travel; the game only asks.
+
+| # | Step | Notes |
+|---|---|---|
+| 1 | The hero's walk **ends** on an exit of the current square ([SPEC-map.md](SPEC-map.md#squares)), and no turn is running | Detected in `game/main.gd` from the world's `walk_ended(cell)` |
+| 2a | The square beyond can't be entered (outside the map, `lake`, `mountain`…) | No turn. The status line says "You can't go that way." and the hero steps back one tile inside the square |
+| 2b | Otherwise the game sends the turn at once, as if the player pressed Act, with an **automatic action** in the player's language: "I head north (forest)." / "Je pars vers le nord (forêt).", followed by anything the player had already typed in the action box | The texts come from `strings.csv` (`travel.north`… with `{kind}`); the kind is the neighbour's |
+| 3 | The turn runs steps 2–10 above. In copy-paste mode the paste window opens, as for any turn | |
+| 4 | If the reply has no `travel`, or the turn is cancelled or fails, the hero **steps back one tile** inside the square ([SPEC-map.md](SPEC-map.md#travel-the-geography-side)); on a cancel the typed text goes back into the action box | The same exit can be tried again by walking onto it |
 
 ## Copy-paste dialog
 
@@ -57,7 +70,7 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 ## Starting the game (M1)
 
 - The first launch asks for the language (default: the browser/system language, else English).
-- Then straight into a new game: the world loads at `mill_road`, the intro text types out, and the action box gets focus.
+- Then straight into a new game: the world loads at `mill_road` (Beta-0.3: in the start square that holds it), the intro text types out, and the action box gets focus.
 - The language can be changed any time in settings.
 
 ## Settings (M1)
@@ -89,6 +102,14 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 - [ ] The HUD shows the new HP, gold, time and place right after step 5b.
 - [ ] Every UI string switches between English and French; no key names (`btn_act`) show on screen.
 - [ ] The API key is never in a save, the debug log or the repo.
+
+**Beta-0.3**
+- [ ] A walk ending on an exit whose neighbour can be entered sends a turn at once; its action is the automatic line in the current language followed by the typed text; in copy-paste mode the paste window opens (automated, plus manual).
+- [ ] A walk ending on an exit that faces a square that can't be entered sends no turn, shows "You can't go that way." and steps the hero back.
+- [ ] A cancelled exit turn, or a reply without `travel`, steps the hero back one tile inside the square and keeps the typed text (automated for the cancel).
+- [ ] A reply with `travel` fades to the destination and the hero stands on the arrival tile (manual).
+- [ ] The HUD place label shows the place, or the square's kind, in both languages.
+- [ ] Loading a save restores the square and the hero's tile.
 
 **M2**
 - [ ] Sheet, Pack, Quests and Codex tabs in the story panel.

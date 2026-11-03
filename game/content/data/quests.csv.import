@@ -1,0 +1,11 @@
+[remap]
+
+importer="keep"
+type=""
+uid="uid://on7bjm45tf0i"
+
+[deps]
+
+source_file="res://content/data/quests.csv"
+
+[params]

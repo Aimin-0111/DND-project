@@ -1,0 +1,6 @@
+Your words roll off the road like rain off a millwheel. The wind keeps blowing up from the river, and nothing about you feels any stronger. Your pack still holds one rusty sword and two healing draughts, no more and no less.
+
+Oda squints at you the way one might look at a man shouting at a goose. "Kael, if you've had the cider, say so now and I'll not hold it against you. Otherwise, answer me properly." Across the water, the mill's dark windows stay dark, and she is still waiting, arms folded.
+
+<<STATE>>
+{"commands": [], "state": {}}

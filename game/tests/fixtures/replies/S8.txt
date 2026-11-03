@@ -1,0 +1,8 @@
+You settle into the ditch beside the Mill Road and wait out the afternoon. Oda grumbles that millers do not sleep in ditches, then pulls her shawl tight and walks back toward the village with a lantern, telling you she wants word at dawn. As the sun sinks behind the reeds, the river turns from copper to black, and a fog creeps up off the water to wrap around the mill.
+
+By the time her lantern has vanished, the mill is a dark shape in the fog, except for a seam of orange light under its shutters. You work along the yard fence, testing each plank before you trust your weight to it, and reach the mill door, which stands open by the width of a hand. Somewhere in the reeds behind you, something moves, then goes still.
+
+The gap is just wide enough for one careful person. Whatever is burning inside, you will have to slip past the threshold without a sound.
+
+<<STATE>>
+{"commands": [{"type": "weather", "kind": "fog"}, {"type": "request_roll", "skill": "Stealth", "dc": 13}], "state": {"time_advance_minutes": 240}}

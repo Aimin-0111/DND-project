@@ -1,0 +1,96 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/settings_dialog.gd" id="1"]
+
+[node name="SettingsDialog" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Shade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(460, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Settings"
+
+[node name="ModeLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "AI mode"
+
+[node name="ModeOption" type="OptionButton" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="KeyLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Claude API key"
+
+[node name="KeyRow" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="KeyField" type="LineEdit" parent="Center/Panel/Margin/VBox/KeyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+secret = true
+
+[node name="ClearButton" type="Button" parent="Center/Panel/Margin/VBox/KeyRow"]
+layout_mode = 2
+text = "Clear"
+
+[node name="KeyNote" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Stored only on this device (in this browser for the web version)."
+autowrap_mode = 3
+
+[node name="Feedback" type="Label" parent="Center/Panel/Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.55, 1)
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 2
+
+[node name="CancelButton" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "Cancel"
+
+[node name="SaveButton" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "Save"

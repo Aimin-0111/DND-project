@@ -14,6 +14,8 @@ node_modules/
 # Secrets: never commit API keys
 .env
 .dev.vars
+# Device settings: may hold a player's own API key
+settings.cfg
 
 # OS files
 Thumbs.db

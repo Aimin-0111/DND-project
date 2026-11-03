@@ -1,0 +1,4 @@
+You pull Excalibur from the mud of the riverbank. It gleams as if it had never left the lake.
+<<STATE>>
+{"commands": [],
+ "state": {"add_items": ["excalibur"], "time_advance_minutes": 2}}

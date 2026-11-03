@@ -1,0 +1,4 @@
+You raise your rusty sword and charge the rust wolf. It snarls and gives ground, waiting to see what you do next.
+<<STATE>>
+{"commands": [{"type": "attack", "target": "rust_wolf", "damage": 6}, {"type": "emote", "who": "hero", "emote": "angry"}],
+ "state": {"time_advance_minutes": 1}}

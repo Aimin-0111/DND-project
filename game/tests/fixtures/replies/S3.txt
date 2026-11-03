@@ -1,0 +1,7 @@
+You back up along the Mill Road until the gravel crunches under your boots, then sprint for the bank. The Sombrecuivre races past below you, dark and fast, with copper glints flashing where the late sun touches it. The far bank is one long stride away, if you are generous about the distance.
+
+Downstream, the water heaves once beneath the old bridge, slow and heavy, like something very large turning over in its sleep. Behind you, Oda calls out, "Break your neck and I'm not paying for the funeral!"
+
+Everything now depends on that last stride.
+<<STATE>>
+{"commands": [{"type": "request_roll", "skill": "Athletics", "dc": 13}], "state": {"time_advance_minutes": 1}}

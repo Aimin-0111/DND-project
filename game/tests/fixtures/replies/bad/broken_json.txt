@@ -1,0 +1,3 @@
+The planks groan as you step onto the bridge. Below you, the Sombrecuivre runs dark and fast, and a cold wind comes up off the water.
+<<STATE>>
+{"commands": [{"type": "move_to", "target": "mill_bridge"}, {"type": "weather", "kind": "ra

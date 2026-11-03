@@ -1,0 +1,16 @@
+id,colour,walkable,layer,tileset_index
+grass,#4c9a3c,true,ground,0
+path,#c8a46a,true,ground,1
+water,#2c6fbf,false,ground,2
+tree,#1d4d24,false,obstacle,3
+rock,#8a8a8a,false,obstacle,4
+floor,#ffd27f,true,ground,5
+wall,#4a3f3a,false,obstacle,6
+bridge,#b0682a,true,ground,7
+sand,#e8d49a,true,ground,8
+flowers,#e48fc0,true,ground,9
+forest_floor,#5a7d2a,true,ground,10
+dirt,#9a7148,true,ground,11
+mud,#6e5f3a,true,ground,12
+reeds,#b5b84a,false,obstacle,13
+wheel,#c9a227,false,obstacle,14

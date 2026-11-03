@@ -1,0 +1,11 @@
+[remap]
+
+importer="keep"
+type=""
+uid="uid://dws7m14302iw1"
+
+[deps]
+
+source_file="res://content/data/locations.csv"
+
+[params]

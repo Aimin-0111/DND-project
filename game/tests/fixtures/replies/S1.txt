@@ -1,0 +1,8 @@
+You turn toward the hill, where a slim silver spire catches the afternoon light above the pines. The only track up the slope is a rut of wet clay that gives out in the scrub after a few yards, and you cannot find a way through from here.
+
+Oda stops dead in the middle of the road and folds her arms. "A wizard, is it? Up there?" she says. "By the millstones, ranger, you promised me the mill first. That hill has been standing longer than either of us. It'll keep till we know who lit my fire."
+
+The old mill waits at the bend in the road, its wheel still and its shutters dark in the daylight. Do you follow Oda down to the mill, or press her to let you go up the hill alone?
+
+<<STATE>>
+{"commands": [], "state": {}}

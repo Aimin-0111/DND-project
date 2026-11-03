@@ -1,6 +1,6 @@
 # Spec: `content` (the team's files)
 
-*Module of [SPEC.md](SPEC.md). Depends on: nothing. Used by: `narration`, `dm`, `world`, `main-screen` (and later `balance-tools`). When: M1.*
+*Module of [SPEC.md](SPEC.md). Depends on: nothing. Used by: `narration`, `dm`, `map`, `world`, `main-screen` (and later `balance-tools`). When: M1, Beta-0.3 (map files).*
 
 ## Objective
 
@@ -26,6 +26,7 @@ All files live under `game/content/`. **This spec owns these formats**; changing
 | `quests.csv` | `quest, stage, title_en, title_fr` | One row per stage, stages 0, 1, 2… with no gaps |
 | `keywords.csv` | `effect, lang, words` | `effect` ∈ burn, freeze, shock, poison, whisper, holy. `lang` ∈ en, fr. `words` is a `|` list |
 | `ui_text.csv` | `key, en, fr` | Every UI string (used by `main-screen`) |
+| `locations.csv` | `id, square, x, y` | Beta-0.2 file (`id`); Beta-0.3 adds where each place's marker is: the hand-made square's id (`sq_<x>_<y>`) and the tile inside it (0–63). The writer's place pages don't change |
 
 The example files in `examples/content/data/` move here, with `name`/`description` split into `_en`/`_fr` columns.
 
@@ -42,6 +43,23 @@ The example files in `examples/content/data/` move here, with `name`/`descriptio
 - Each `## Title` line starts a new entry.
 - An entry gets an id from a line `- **Identifiant** : <id>` (or `- **Id** : <id>`). Place entries' ids are the **allowed locations**; NPC entries' ids are the allowed `who` for emotes.
 - The whole text of every entry goes to the AI as the Codex, in a fixed order (by folder, then file name) so the prompt prefix stays the same between turns (needed for prompt caching).
+
+### Maps (`maps/`)
+
+Beta-0.3, decided by the lead on November 2, 2026. The rules behind these files (squares, exits, generation) are in [SPEC-map.md](SPEC-map.md). The artist works in this one folder; a French guide is in [docs/GUIDE-CARTES.md](docs/GUIDE-CARTES.md).
+
+| File | Contents |
+|---|---|
+| `world.png` | The world map. **One pixel = one square**; the pixel's colour is the square's kind. Any size: the world is as big as the image |
+| `kinds.csv` | `id, colour, passable`: one row per kind. Starter kinds: `meadow`, `forest`, `hills`, `road`, `marsh` (`passable` = `true`), `lake`, `mountain` (`false`). The reserved kind `handmade` (`#ff00ff`, magenta) marks hand-made squares |
+| `tiles.csv` | `id, colour, walkable, layer, tileset_index`: one row per tile. `layer` is `ground` or `obstacle` (obstacle tiles always block, so their `walkable` is `false`). `tileset_index` counts 32 × 32 cells in `art/tiles-placeholder.png` from 0, left to right then row by row. Adding a tile needs no code |
+| `squares.csv` | `file, x, y, kind`: one row per hand-made square. `file` is the PNG in `squares/`; `x`, `y` is its pixel on `world.png` (so its id is `sq_<x>_<y>`); `kind` is the kind it counts as for its name and its neighbours (not `handmade`) |
+| `squares/*.png` | The hand-made squares: **64 × 64 pixels, one pixel = one tile**, coloured with the `tiles.csv` colours. Names: lowercase, digits, `-` or `_` |
+
+- **Colours** are written `#rrggbb` (hexadecimal, as image editors show them). Only red, green and blue count; transparency is ignored. A colour may appear only once in its table.
+- `passable` and `walkable` are `true` or `false`.
+- **Display names** of kinds are in `i18n/strings.csv` as `kind.<id>.name` (French and English), like the place names.
+- **Godot:** the map PNGs are imported as **Image** (`Import As: Image`), so the game can read their pixels in an exported build. A PNG the editor imports as a texture still works (the game reads its image), but the Image import is lighter. The CSVs are imported as "Keep File".
 
 ### Art (`art/`)
 
@@ -77,6 +95,18 @@ The example files in `examples/content/data/` move here, with `name`/`descriptio
 | A file isn't valid UTF-8 | error, message says how to re-save it |
 | A referenced image is missing; a `ui_text` French cell is empty | warning |
 | A place id has no marker in any zone (`world` reports its markers) | warning |
+| **Maps (Beta-0.3)** | |
+| A colour in `world.png` or a square PNG matches no row of `kinds.csv` / `tiles.csv` (reported with the pixel position; at most 20 positions per file, then a count) | error (that square can't be entered, that tile blocks) |
+| A hand-made square PNG isn't 64 × 64; `world.png` is empty; the tileset isn't a whole number of 32 px cells | error |
+| A `tileset_index` is outside the tileset; an obstacle tile is marked walkable; a colour or id appears twice; `passable`/`walkable` isn't `true`/`false` | error |
+| A tile the generator needs is missing from `tiles.csv` (`grass`, `path`, `water`, `tree`, `rock`, `flowers`, `forest_floor`, `dirt`, `mud`, `reeds`) | error |
+| A hand-made square is off the world map, two share a pixel, its file is missing, or its `kind` is unknown | error |
+| A magenta pixel has no hand-made square in `squares.csv` | error |
+| A hand-made square's pixel isn't painted magenta | warning |
+| A place in `locations.csv` has a square that isn't hand-made, a tile outside 0–63 or a tile the hero can't walk on | error |
+| A place has no square (the hero can never reach it) | warning |
+| An exit of a hand-made square faces a square the hero can't enter (outside the map, `lake`, `mountain`…) | warning |
+| A passable kind has no generation recipe yet (it will look like a meadow); a kind has no `kind.<id>.name` in `strings.csv` | warning; error for the name |
 
 ## Acceptance criteria (M1)
 
@@ -88,6 +118,12 @@ The example files in `examples/content/data/` move here, with `name`/`descriptio
 - [ ] `codex_text()` is identical across two loads (stable order).
 - [ ] Loading all content takes under 1 second in the web build.
 - [ ] Nothing in `content` writes to `game/content/`.
+
+## Acceptance criteria (Beta-0.3)
+
+- [ ] `tools/content_check.py --check` reads `world.png`, the square PNGs, `kinds.csv`, `tiles.csv`, `squares.csv` and the new `locations.csv` columns with the Python standard library only, and passes on the real files.
+- [ ] Crafted bad files give each map check above, with the file and the pixel position.
+- [ ] The game reads the map PNGs in an exported build (imported as Image).
 
 ## Tests
 
