@@ -1,6 +1,6 @@
 # Spec: `narration` (story text and animated words)
 
-*Module of [SPEC.md](SPEC.md). Depends on: `content` (keyword lists). Used by: `main-screen`. When: M1 (burn, freeze, shock), later the other three effects.*
+*Module of [SPEC.md](SPEC.md). Depends on: `content` (keyword lists). Used by: `main-screen`. When: M1 (burn, freeze, shock); poison, whisper and holy were built early, in Beta-0.3 (2026-11-03).*
 
 ## Objective
 
@@ -34,11 +34,16 @@ The narration comes from the AI, so it is **untrusted**.
 | `burn` | Orange-yellow flicker, letters bob up | `#ff8a3d` | M1 |
 | `freeze` | Pale blue, a sparkle wave runs across | `#9fd8ff` | M1 |
 | `shock` | Yellow, letters jitter | `#ffe066` | M1 |
-| `poison` | Green, slow wobble | `#8fd16a` | Later |
-| `whisper` | Grey, fades in and out | `#b9b3c9` | Later |
-| `holy` | Soft gold glow | `#ffe9a8` | Later |
+| `poison` | Green, slow wobble | `#8fd16a` | Built (Beta-0.3) |
+| `whisper` | Grey, fades in and out | `#b9b3c9` | Built (Beta-0.3) |
+| `holy` | Soft gold glow | `#ffe9a8` | Built (Beta-0.3) |
 
-An effect not built yet shows in its still colour.
+All six effects are built. Any effect added later shows in its still colour until it is built.
+
+Beta-0.3 keeps the three later effects small, so letters never overlap and the words stay readable:
+- `poison` only rises and sinks, in a slow wave across the word (at most 1.5 px, never sideways);
+- `whisper` only fades, never below half strength;
+- `holy` only changes colour, from warm gold to pale cream around its still colour. It never turns white, so it still stands out from plain text.
 
 ## Interface
 
@@ -75,12 +80,16 @@ An effect not built yet shows in its still colour.
 - [ ] With 100 entries in the story and 4 animating, the game holds 55+ fps on the lead's PC.
 
 **Later**
-- [ ] Poison, whisper and holy effects.
+- [x] Poison, whisper and holy effects are built and installed in the story panel (automated, Godot 4.7.2 headless, 2026-11-03):
+  - a new entry moves each one, with no raw `[poison]`, `[whisper]` or `[holy]` text;
+  - the 5th newest entry and older, and reduce motion, turn all six effects into their still colours.
+- [ ] Poison, whisper and holy look like the table on screen (manual check: left for the lead).
 - [ ] Text speed setting, including "instant".
 
 ## Tests
 
 - Automated: the `tag()` fixtures above, plus a check that every word in `keywords.csv` gets tagged in a sample sentence.
+- Automated (story panel, `test_keyword_tagger.gd`): every effect tag shows without raw text; new entries move; old entries and reduce motion stay still in the still colours; poison, whisper and holy letters never move sideways or more than 2 px up or down, and whisper never fades below half.
 - Manual (before each build): typing, skipping, scrolling, the look of each effect, reduce motion.
 
 ## Boundaries (module)
