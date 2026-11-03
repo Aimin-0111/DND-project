@@ -1,6 +1,6 @@
 # Spec: `dm` (one AI Dungeon Master turn)
 
-*Module of [SPEC.md](SPEC.md). Depends on: `core` (state view, skill list), `content` (rules, Codex, allowed ids). Used by: `main-screen`; `world` uses its command list; `proxy` (M2) implements its server contract. When: M1 (copy-paste + own key).*
+*Module of [SPEC.md](SPEC.md). Depends on: `core` (state view, skill list), `content` (rules, Codex, allowed ids), `map` (the MAP part and the travel checks, through `core`'s map view). Used by: `main-screen`; `world` uses its command list; `proxy` (M2) implements its server contract. When: M1 (copy-paste + own key), Beta-0.3 (`travel` and the MAP part, lead's decisions of November 2, 2026).*
 
 ## Objective
 
@@ -30,14 +30,17 @@ Ordered from **most stable to least stable**, so prompt caching can reuse the be
 | 1 | DM rules + one language line ("Narrate in French." / "Narrate in English.") | `content.dm_rules()` |
 | 2 | Codex | `content.codex_text()` |
 | 3 | Story so far | `state.story_summary` |
-| 4 | State view: hero, gold, pack, quests, location, weather, creatures present, clock text | `core` |
-| 5 | Allowed ids: locations, creatures, items, quests, npcs + skills | `content.allowed_ids()` + `core.skills()` |
-| 6 | Last roll result, if any | `state.last_roll` |
-| 7 | Player action | The action box |
+| 4 | State view: hero, gold, pack, quests, location, weather, creatures present **in the current square**, clock text | `core` |
+| 5 | **MAP** (Beta-0.3): the current square (id, kind, made by hand or generated, its places), the four neighbours (id, kind, whether the hero can enter, whether visited, their places) and the visited squares (id, kind, places) | `core`'s map view, from `state` + `map` |
+| 6 | Allowed ids: locations, creatures, items, quests, npcs + skills + `travel` (the valid `to` values this turn) | `content.allowed_ids()` + `core.skills()` + the map view |
+| 7 | Last roll result, if any | `state.last_roll` |
+| 8 | Player action | The action box, or the automatic travel action ([SPEC-main-screen.md](SPEC-main-screen.md#exits-the-automatic-travel-turn)) |
 
 - Ids and JSON keys stay in English whatever the language.
-- Never sent: `seed`, `rng_state`, `log`, settings, the API key.
+- Never sent: `seed`, `rng_state`, `log`, settings, the API key, and (Beta-0.3) the stored tiles (`squares`) and `hero_cell`.
+- In Godot the MAP view reaches `PromptBuilder.build` inside the allowed ids (`allowed["map"]`); the builder takes it out of ALLOWED IDS and prints it as its own part. The reply checks read the same view, so the prompt and the checks can't disagree.
 - **The DM rules include the two fixes from the Haiku test** (decided October 19, 2026; see `examples/ai-tests/RESULTS.md`): a place, person, creature or item that isn't in the Codex, the allowed ids or the pack doesn't exist in this world (S1); when the story moves the hero to a listed place, the reply includes a `move_to` for it (S8). Code can't check the first one, so S1 and S8 are rerun once the real game can play a turn.
+- **Beta-0.3 rules:** how to use `travel` (a direction from MAP the hero can enter, or a visited square id; at most one; the other commands then apply to the new square); describe a generated square by its kind and never invent named places there. Changing `dm-rules.md` invalidates the prompt cache: rerun S1 and S8, plus one exit turn.
 - **M1 story so far:** the intro text + the last 3 narrations (each cut to 600 characters). **M2:** a rolling summary refreshed every 5 turns by a cheaper model, at most 200 words.
 
 ## Contract: the reply format
@@ -55,14 +58,17 @@ The planks groan as you step onto the bridge...
 
 | `type` | Fields | Check |
 |---|---|---|
-| `move_to` | `target` | `target` is an allowed location |
-| `spawn` | `creature`, `near` | Allowed creature, allowed location |
+| `travel` | `to` | Beta-0.3. `to` is `north`, `east`, `south` or `west` and leads to an existing square the hero can enter, or `to` is the id of a square the hero has visited (not the current one). At most one per reply: later ones are dropped |
+| `move_to` | `target` | `target` is a place **in the current square** (the destination square when the reply travels). Without a map view (tests, M1): an allowed location |
+| `spawn` | `creature`, `near` | Allowed creature; `near` is a place in the current square (as for `move_to`) or `hero` |
 | `despawn` | `creature` | Allowed creature |
 | `emote` | `who`, `emote` | `who` is `hero` or an allowed NPC; `emote` ∈ surprised, angry, happy, scared, sleep |
 | `weather` | `kind` | `kind` ∈ clear, rain, fog, storm, snow, ash |
 | `request_roll` | `skill`, `dc` | Allowed skill; `dc` is a whole number from 5 to 30 |
 
 A command with a missing field, a wrong type or an unknown value is dropped and noted in `errors`. The others still apply.
+
+**Travel plays first.** The kept `travel` is moved to the front of the checked list, and every other command in that reply applies to the destination square: `move_to` and `spawn near` are checked against the destination's places. The checked travel keeps only `type` and `to`; `core` fills in the destination `square` and the arrival `cell` when it applies it.
 
 ### State changes
 
@@ -96,7 +102,7 @@ One interface: `generate_turn(prompt) -> reply text` (empty = no reply), plus st
 
 **Own-key status messages** (in the player's language): no key set, key refused (401), service error (other codes), no answer after 90 s, the DM can't narrate that (refusal), reply cut off (the text is kept, a warning is logged).
 
-**Server contract for `proxy` (M2, defined here):** `POST /turn` with `{lang, codex, summary, state, allowed, last_roll, action}` returns `200 {text, truncated, usage}`; `422` refusal; `401` bad game token; `429` too many requests. The server holds the DM rules itself (generated from `dm-rules.md`).
+**Server contract for `proxy` (M2, defined here):** `POST /turn` with `{lang, codex, summary, state, map, allowed, last_roll, action}` returns `200 {text, truncated, usage}`; `422` refusal; `401` bad game token; `429` too many requests. The server holds the DM rules itself (generated from `dm-rules.md`).
 
 ## Acceptance criteria (M1)
 
@@ -124,10 +130,18 @@ One interface: `generate_turn(prompt) -> reply text` (empty = no reply), plus st
   - the parts come in the order above;
   - `seed`, `rng_state`, `log` and the key never appear;
   - the language line follows the setting;
-  - two prompts built from the same state differ only in parts 3–7.
+  - two prompts built from the same state differ only in parts 3–8.
 - [ ] **Copy-paste:** in the web build, the copied text pastes into a Claude chat in one piece, and a pasted reply runs a full turn.
 - [ ] **Own key:** a real key produces a turn. A wrong key shows the "key refused" message and changes nothing. Turning off the network shows an error, not a frozen game.
 - [ ] The game keeps animating (hero idle, effects) while waiting for the AI.
+
+## Acceptance criteria (Beta-0.3)
+
+- [ ] **Travel checks** (automated): a direction to an enterable square is kept; a direction to a lake, a mountain or off the map is dropped; a visited square id is kept, an unvisited or malformed one is dropped, the current square is dropped; a second travel is dropped; the kept travel comes first even when the AI wrote it last; extra keys on a travel are removed.
+- [ ] After a travel, `move_to` and `spawn near` are checked against the destination's places; `spawn near hero` is kept.
+- [ ] Without a map view (the M1 fixtures), the old checks apply unchanged.
+- [ ] **Prompt:** a MAP part between STATE and ALLOWED IDS, with the current square, its places, the four neighbours and the visited squares; ALLOWED IDS lists the `travel` targets; no stored tiles (`legend`, `rows`) and no `hero_cell` in the prompt.
+- [ ] `dm-rules.md` explains `travel` and says generated squares are described by their kind, with no invented named places.
 
 ## Tests
 
