@@ -6,6 +6,8 @@ signal arrived
 
 const HERO_TEXTURE := preload("res://content/art/hero-placeholder.png")
 const TILE := 32
+## Walking speed in tiles per second: the one setting for it (SPEC-world).
+const WALK_CELLS_PER_SECOND := 5.0
 const ANIMATIONS := {
 	"idle_down": 0,
 	"walk_down": 1,
@@ -15,7 +17,7 @@ const ANIMATIONS := {
 	"attack_down": 5,
 }
 
-@export var speed := 90.0
+var speed := WALK_CELLS_PER_SECOND * TILE
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 

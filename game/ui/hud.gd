@@ -31,7 +31,17 @@ func _refresh(state: Dictionary) -> void:
 	hp_label.text = "%s %d/%d" % [Content.t("ui.hp"), int(hero["hp"]), int(hero["hp_max"])]
 	gold_label.text = "%s %d" % [Content.t("ui.gold"), int(state["gold"])]
 	time_label.text = _clock(int(state["time_minutes"]))
-	place_label.text = Content.t("location.%s.name" % str(state["location"]))
+	place_label.text = _place_text(state)
+
+
+## The place where the hero is; between places (and in generated squares),
+## the kind of the square ("Forest" / "Forêt").
+func _place_text(state: Dictionary) -> String:
+	var location := str(state.get("location", ""))
+	if not location.is_empty():
+		return Content.t("location.%s.name" % location)
+	var kind := Game.square_kind()
+	return "" if kind.is_empty() else Content.t("kind.%s.name" % kind)
 
 
 func _on_language_changed(_lang: String) -> void:

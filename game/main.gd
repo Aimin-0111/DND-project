@@ -1,6 +1,8 @@
 extends Control
 ## Main shell: 40/60 split (stacked below 900 px), HUD, story panel and the
 ## copy-paste turn. The world stays in a SubViewport so its camera is isolated.
+## A walk that ends on an exit of the square sends the automatic travel turn
+## ("I head north (forest).", SPEC-main-screen.md); the DM decides the travel.
 
 const SPLIT_RATIO := 0.6
 const STACK_BELOW := 900
@@ -40,6 +42,7 @@ func _ready() -> void:
 	director.note.connect(_on_note)
 	director.roll_requested.connect(_on_roll_requested)
 	director.moved_to.connect(Game.set_location)
+	world.walk_ended.connect(_on_walk_ended)
 	hud.language_requested.connect(_on_language_requested)
 	hud.save_requested.connect(_on_save)
 	hud.load_requested.connect(_on_load)
@@ -91,13 +94,52 @@ func _on_act() -> void:
 	var action := action_input.text.strip_edges()
 	if action.is_empty():
 		return
+	_play_turn(action, action, "")
+
+
+## A walk ended on `cell`: the state takes the tile, and at an exit the DM is
+## asked about travel at once, with what the player had typed.
+func _on_walk_ended(cell: Vector2i) -> void:
+	if _busy:
+		return
+	Game.set_hero_cell(cell)
+	var direction: String = world.exit_at(cell)
+	if direction.is_empty():
+		return
+	var beyond := Game.world_map.neighbour(str(Game.state.get("square", "")), direction)
+	if not Game.world_map.can_enter(beyond):
+		status_label.text = Content.t("ui.way_blocked")
+		Game.set_hero_cell(world.step_back())
+		return
+	var typed := action_input.text.strip_edges()
+	var action := exit_action(direction, Game.world_map.kind_of(beyond))
+	if not typed.is_empty():
+		action += " " + typed
+	_play_turn(action, typed, direction)
+
+
+## The automatic action at an exit: "I head north (forest)." in the player's language.
+func exit_action(direction: String, kind: String) -> String:
+	var kind_name := Content.t("kind.%s.name" % kind).to_lower()
+	return Content.t("travel." + direction).format({"kind": kind_name})
+
+
+## One turn. `typed` is what the player wrote (it goes back into the box if
+## the turn fails); `exit_direction` is set for the automatic travel turn, and
+## the hero then steps back inside the square unless the reply travelled.
+func _play_turn(action: String, typed: String, exit_direction: String) -> void:
 	action_input.text = ""
 	story_log.add_plain_line("> " + action)
 	_set_busy(true)
 	status_label.text = Content.t("ui.waiting")
+	Game.set_hero_cell(world.hero_cell())
+	var square_before := str(Game.state.get("square", ""))
 
 	var result: Dictionary = await DM.play_turn(action)
 	if not bool(result.get("ok", false)):
+		action_input.text = typed
+		if not exit_direction.is_empty():
+			Game.set_hero_cell(world.step_back())
 		_set_busy(false)
 		_show_errors(result.get("errors", []))
 		return
@@ -114,6 +156,9 @@ func _on_act() -> void:
 	for note in Game.apply_turn(result.get("changes", {}), commands):
 		push_warning("Turn: %s" % str(note))
 	await director.run(commands)
+	Game.set_hero_cell(world.hero_cell())
+	if not exit_direction.is_empty() and str(Game.state.get("square", "")) == square_before:
+		Game.set_hero_cell(world.step_back())
 
 	var error := Game.save("auto")
 	if error == OK:
@@ -147,6 +192,8 @@ func _on_roll_requested(_skill: String, _dc: int) -> void:
 
 
 func _on_save() -> void:
+	if not _busy:
+		Game.set_hero_cell(world.hero_cell())
 	var error := Game.save("manual")
 	if error == OK:
 		status_label.text = Content.t("ui.saved")
@@ -167,13 +214,7 @@ func _on_load() -> void:
 
 func _after_load() -> void:
 	_localize()
-	var hero = world.get_node("Hero")
-	var location := str(Game.state.get("location", "mill_road"))
-	var marker := world.get_node_or_null("Locations/" + location) as Marker2D
-	if marker != null:
-		hero.global_position = marker.global_position
-	hero.stop()
-	director.show_state(Game.state)
+	world.show_state(Game.state)
 	status_label.text = Content.t("ui.loaded")
 	story_log.add_plain_line(Content.t("ui.loaded"))
 
@@ -239,3 +280,4 @@ func _set_busy(value: bool) -> void:
 	_busy = value
 	act_button.disabled = value
 	action_input.editable = not value
+	world.set_locked(value)
