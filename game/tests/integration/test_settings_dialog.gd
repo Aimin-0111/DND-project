@@ -42,6 +42,8 @@ func run() -> Array:
 		failures.append("the key field must be masked")
 	if mode_option.selected != 0 or not key_field.text.is_empty():
 		failures.append("a fresh dialog should show copy-paste and no key")
+	if key_field.placeholder_text != content.t("ui.api_key_placeholder"):
+		failures.append("with no saved key, the field should ask for one")
 	var note: Label = dialog.get_node("Center/Panel/Margin/VBox/KeyNote")
 	if note.text != content.t("ui.api_key_note"):
 		failures.append("the 'stored only on this device' note is missing")
@@ -58,8 +60,22 @@ func run() -> Array:
 		failures.append("the HUD should show own-key mode after Save")
 
 	gear.pressed.emit()
-	if mode_option.selected != 1 or key_field.text != FAKE_KEY:
-		failures.append("reopening should show the saved mode and key")
+	if mode_option.selected != 1:
+		failures.append("reopening should show the saved mode")
+	if not key_field.text.is_empty() or key_field.placeholder_text != content.t("ui.api_key_saved"):
+		failures.append("reopening should say a key is saved, never show the key")
+	dialog.get_node("Center/Panel/Margin/VBox/Buttons/SaveButton").pressed.emit()
+	if SettingsStore.read(TEST_SETTINGS).api_key != FAKE_KEY:
+		failures.append("Save with an empty field should keep the saved key")
+
+	gear.pressed.emit()
+	var replacement := FAKE_KEY + "-2"
+	key_field.text = replacement
+	dialog.get_node("Center/Panel/Margin/VBox/Buttons/SaveButton").pressed.emit()
+	if SettingsStore.read(TEST_SETTINGS).api_key != replacement:
+		failures.append("a typed key should replace the saved one")
+
+	gear.pressed.emit()
 	dialog.get_node("Center/Panel/Margin/VBox/KeyRow/ClearButton").pressed.emit()
 	if SettingsStore.read(TEST_SETTINGS).api_key != "" or not key_field.text.is_empty():
 		failures.append("Clear should remove the key from the file at once")
@@ -67,6 +83,8 @@ func run() -> Array:
 		failures.append("Clear should keep the saved mode")
 	if not feedback.visible or feedback.text != content.t("ui.key_cleared"):
 		failures.append("Clear should say the key was removed")
+	if key_field.placeholder_text != content.t("ui.api_key_placeholder"):
+		failures.append("after Clear, the field should ask for a key again")
 
 	mode_option.select(0)
 	key_field.text = "NOT-SAVED"

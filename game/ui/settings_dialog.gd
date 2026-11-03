@@ -1,14 +1,20 @@
 class_name SettingsDialog
 extends Control
 ## Settings dialog, opened by the HUD's gear button: the AI mode and the
-## player's own API key. The key field is masked, and the key is stored only
-## in the settings file on this device (SettingsStore). Save applies the mode
-## and the key; Clear removes the stored key at once; Cancel or Esc closes.
+## player's own API key, stored only in the settings file on this device
+## (SettingsStore).
+##
+## The key field is masked and starts empty: a saved key is never shown again,
+## only "A key is saved". Save applies the mode, and the key if one was typed
+## or pasted (it replaces the saved one); an empty field keeps the saved key.
+## Clear removes the saved key at once. Cancel or Esc closes without saving.
 
 signal saved
 
 ## The order of the items in the mode list.
 const MODES := [SettingsStore.MODE_COPY_PASTE, SettingsStore.MODE_OWN_KEY]
+
+var _has_saved_key := false
 
 @onready var title_label: Label = $Center/Panel/Margin/VBox/Title
 @onready var mode_label: Label = $Center/Panel/Margin/VBox/ModeLabel
@@ -36,17 +42,19 @@ func _ready() -> void:
 	_localize()
 
 
-## Shows the saved mode and the saved key, masked.
+## Shows the saved mode, and whether a key is saved (never the key itself).
 func open() -> void:
 	var settings := SettingsStore.read(Content.settings_path)
 	mode_option.select(maxi(MODES.find(settings.mode), 0))
-	key_field.text = settings.api_key
+	_has_saved_key = not settings.api_key.is_empty()
+	key_field.text = ""
+	_show_key_hint()
 	_show_feedback("")
 	visible = true
 	key_field.grab_focus()
 
 
-## Closes without saving and drops the key from the field.
+## Closes without saving and empties the key field.
 func close() -> void:
 	visible = false
 	key_field.text = ""
@@ -62,7 +70,9 @@ func _input(event: InputEvent) -> void:
 func _on_save() -> void:
 	var settings := SettingsStore.read(Content.settings_path)
 	settings.mode = MODES[maxi(mode_option.selected, 0)]
-	settings.api_key = key_field.text
+	var typed := SettingsStore.clean_key(key_field.text)
+	if not typed.is_empty():
+		settings.api_key = typed
 	if settings.write() != OK:
 		_show_feedback(Content.t("ui.save_failed"))
 		return
@@ -79,6 +89,8 @@ func _on_clear() -> void:
 	if settings.write() != OK:
 		_show_feedback(Content.t("ui.save_failed"))
 		return
+	_has_saved_key = false
+	_show_key_hint()
 	_show_feedback(Content.t("ui.key_cleared"))
 
 
@@ -96,11 +108,16 @@ func _localize() -> void:
 	mode_option.set_item_text(0, Content.t("ui.ai_mode_copy_paste"))
 	mode_option.set_item_text(1, Content.t("ui.ai_mode_own_key"))
 	key_label.text = Content.t("ui.api_key")
-	key_field.placeholder_text = Content.t("ui.api_key_placeholder")
 	clear_button.text = Content.t("ui.clear")
 	key_note.text = Content.t("ui.api_key_note")
 	cancel_button.text = Content.t("ui.cancel")
 	save_button.text = Content.t("ui.settings_save")
+	_show_key_hint()
+
+
+## The empty field's hint: whether a key is already saved on this device.
+func _show_key_hint() -> void:
+	key_field.placeholder_text = Content.t("ui.api_key_saved" if _has_saved_key else "ui.api_key_placeholder")
 
 
 func _show_feedback(message: String) -> void:

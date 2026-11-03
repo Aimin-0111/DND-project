@@ -13,6 +13,7 @@ ui.hud_ai_copy_paste,IA : copier-coller,AI: copy-paste
 ui.hud_ai_own_key,IA : ma clé,AI: own key
 ui.api_key,Clé API Claude,Claude API key
 ui.api_key_placeholder,Colle ta clé ici,Paste your key here
+ui.api_key_saved,Une clé est enregistrée sur cet appareil,A key is saved on this device
 ui.api_key_note,Enregistrée seulement sur cet appareil (dans ce navigateur pour la version web).,Stored only on this device (in this browser for the web version).
 ui.clear,Effacer,Clear
 ui.key_cleared,Clé effacée de cet appareil.,Key removed from this device.

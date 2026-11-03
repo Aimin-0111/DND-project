@@ -10,12 +10,16 @@ Own-key mode lets a player use their own Claude API key: each turn goes straight
 2. **Open the settings.** Click the gear button in the HUD (top left, after Load).
 3. Under **AI mode**, pick **My own API key**. Paste the key into the masked field, then click **Save**.
 4. The HUD now shows **AI: own key**. Type an action and press **Act**: the DM answers with no paste dialog.
-5. **Clear** removes the key from the device at once, even if you then click Cancel. To go back to the free mode, pick **Copy-paste (free)** and save.
+5. **Later visits to the settings:**
+   - The key field stays empty and says **A key is saved on this device**. The game never shows a saved key again.
+   - **Save** with the field empty keeps the saved key. A key typed or pasted in the field replaces it.
+   - **Clear** removes the key from the device at once, even if you then click Cancel.
+   - To go back to the free mode, pick **Copy-paste (free)** and save.
 
 Where the key lives:
 - in `user://settings.cfg`, section `[ai]`;
 - on Windows: `%APPDATA%\Godot\app_userdata\Brasswake Reach\settings.cfg`;
-- in the web build: the browser's storage (IndexedDB) for the page's address.
+- in the web build: the browser's IndexedDB for the page's address, at `/userfs/godot/app_userdata/Brasswake Reach/settings.cfg`.
 
 It is never in a save, a log, the prompt, the repo or a build. The player's own Claude account pays for the turns.
 
@@ -77,6 +81,7 @@ Where the player sees them (`main.gd` was off limits for this task):
   - `network error (HTTPRequest result 3)`;
   - `no answer after 90 s`.
 - The key never appears. As a safety net, any log line that contains it gets `[key]` instead.
+- In the web build these lines go to the browser console (F12).
 
 ## Files
 
@@ -88,7 +93,7 @@ Where the player sees them (`main.gd` was off limits for this task):
 | `game/ui/icons/gear.svg` | New. The gear icon: the default font has no ⚙ character, so the web build would show a box. The artist can replace it (same name, about 20×20) |
 | `game/ui/hud.gd`, `hud.tscn` | Gear button, "AI: …" line, own-key message line. The dialog sits in a `CanvasLayer` (layer 3) inside the HUD scene |
 | `game/autoload/dm.gd` | Reads the settings at each turn and picks the connection. The copy-paste path is unchanged. New `connection_for()` and `connection_notice` |
-| `game/content/i18n/strings.csv` | 19 new rows (EN + FR), right after `ui.load` |
+| `game/content/i18n/strings.csv` | 20 new rows (EN + FR), right after `ui.load` |
 | `game/tests/…` | 4 new test files, listed in `run_tests.gd` right after `test_smoke.gd` |
 | `.gitignore` | Also ignores `settings.cfg` |
 
@@ -108,27 +113,40 @@ The new tests use no network and the fake key `FAKE-KEY-FOR-TESTS`. Their settin
 | `unit/test_settings_store.gd` | Round trip of mode and key. The `[general]` language survives. A pasted key loses its spaces and line breaks. An empty key is removed from the file. An unknown mode falls back to copy-paste. `DM.connection_for()` picks the right connection |
 | `unit/test_own_key_request.gd` | Headers: Bearer key, version, beta header; the browser header only for web; no `x-api-key`. Model, `max_tokens`, effort low, fallbacks, no sampling settings. Two system blocks with cache markers. The user message has no RULES/CODEX, keeps the prompt order, and system + user rebuild the copy-paste text exactly, even when the lore contains part headers. The key appears only once, in the header. Timeout 90 s |
 | `unit/test_own_key_response.gd` | Text (thinking and fallback blocks skipped), refusal (partial text dropped), cut-off (`max_tokens` and `model_context_window_exceeded`: text kept), 401, 500 (code and request id logged), 400/403/404/429/529, timeout, DNS, connection and TLS errors, a reply that isn't JSON, a reply with no text, the usage line, the messages in both languages, and the key scrubbed from logs. Also a no-key turn through the DM: it fails at once with the no-key message. The next turn, in copy-paste mode, still opens the paste dialog |
-| `integration/test_settings_dialog.gd` | Gear opens the dialog. The key field is masked. Save, Clear (applies at once) and Cancel (saves nothing). The HUD mode line and message line. The dialog follows the language |
+| `integration/test_settings_dialog.gd` | Gear opens the dialog. The key field is masked. Save. A reopened dialog says a key is saved but never shows it. An empty field keeps the key; a typed key replaces it. Clear (applies at once) and Cancel (saves nothing). The HUD mode line and message line. The dialog follows the language |
 
-**Mutation check.** Six deliberate bugs, each caught by at least one new test:
+**Mutation check.** Eight deliberate bugs, each caught by at least one new test:
 - 401 not treated as "refused";
 - browser header always sent;
 - refusal keeping its text;
 - DM ignoring own-key mode;
 - the settings write losing the language;
-- Clear not removing the key.
+- Clear not removing the key;
+- Save with an empty field wiping the key;
+- the dialog showing the saved key.
 
-**Scratch checks** (scripts outside the repo, not committed):
+**Desktop checks in the real engine** (scripts outside the repo, not committed):
 - **Screenshots** (Xvfb, OpenGL): the HUD and the dialog look right in English and French, at 1280×720.
 - **A full DM turn against the real API with the fake key.** The API answered `401 authentication_error: Invalid bearer token`, and the player got "The API key was refused…" in about 80 ms. The game kept running frames, and Godot's log files did not contain the key.
 - **DNS failure:** the network message, at once.
 - **A local server that accepts the connection and never answers** (timeout lowered to 4 s for the check): `RESULT_TIMEOUT` and the "no answer" message. 573 frames ran during the wait, so the game did not freeze.
 
+**Web build in Chromium.**
+- **How it was built:** with the repo's Web preset and the official 4.7.2 no-threads web template, then served from `localhost` with `python -m http.server`.
+- **Settings:** language picker, gear, mode list, masked key field, Save, Clear and the reopened dialog all work by mouse and keyboard. The settings file shows up in IndexedDB with the `[ai]` section. After Clear, the key is gone from IndexedDB.
+- **Own-key turn with the fake key:**
+  - The game sent `authorization`, `anthropic-version`, `anthropic-beta`, `anthropic-dangerous-direct-browser-access`, `content-type` and `accept`. The key was only in `authorization`.
+  - The API answered `401` with `access-control-allow-origin: *`, so the game could read it. The story and the HUD said "The API key was refused…". HP and gold did not change, and Act worked again.
+  - The browser console showed the 401 warning and never the key.
+- **Without the browser-access header**, a page on `localhost` can't read the API's answer at all (checked with a plain `fetch`): that header is required.
+- **Browser offline:** "Can't reach the AI service…" in the story and the HUD. The game kept animating and unlocked.
+- **Back in copy-paste mode,** Act opens the paste dialog with the prompt, and no API request is made.
+- The exported files contain no `sk-ant` string and no `api_key` value.
+
 **Not tested here:**
-- a real key (there is none in this environment);
-- the web build (no export templates here);
+- a real key (there is none in this environment), so no successful own-key turn, no real `DM usage` line and no real cache numbers;
 - Windows and macOS;
-- the real cache numbers.
+- Firefox and Edge.
 
 ## Manual checks left for the lead
 
@@ -148,7 +166,7 @@ Type the key at runtime only. Never paste it into a file in the repo, a commit m
 
    - Open `http://localhost:8000`, set the key in the gear dialog and play a turn.
    - The browser console (F12) shows the `DM usage` line.
-   - If every turn says "Can't reach the AI service", the browser blocked the call: look for a CORS error in the console and report it.
+   - The browser side (CORS) was already checked here with a fake key, so a failure now most likely means a problem with the key or the account.
 3. **Wrong key.** Save a wrong key (change one character) and play a turn.
    - Expect "The API key was refused. Check it in Settings." in the story and in the HUD.
    - HP, gold, place and time do not change. The game is not saved.
@@ -170,7 +188,7 @@ When checks 1–4 pass, Task 17 can be checked in `tasks/todo.md`. It is still o
   - The HUD message line can then go.
 - **No automatic retry** on `429`, `500` or `529`: the player presses Act again.
 - **Browser storage on itch.io (check before the first upload).**
-  - In the web build the key sits in the browser's storage, under the page's address.
-  - itch.io serves many HTML games from one shared domain. If Godot games there share one storage area, another game could read the key.
+  - In the web build the key sits in IndexedDB, which any page on the same address can read.
+  - itch.io serves many HTML games from one shared domain. If that is still the case, another game on that domain could read the key.
   - This was not verified. M1 builds stay on `localhost`, so it doesn't apply yet.
 - **The key is readable on the device.** Anyone who can open that computer account or browser profile can read the settings file, as for any "bring your own key" app. A key with an expiry date and a spend limit keeps the risk small.
