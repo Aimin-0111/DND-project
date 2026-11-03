@@ -7,6 +7,10 @@ extends SceneTree
 
 const TEST_PATHS := [
 	"res://tests/unit/test_smoke.gd",
+	"res://tests/unit/test_settings_store.gd",
+	"res://tests/unit/test_own_key_request.gd",
+	"res://tests/unit/test_own_key_response.gd",
+	"res://tests/integration/test_settings_dialog.gd",
 	"res://tests/unit/test_content_loader.gd",
 	"res://tests/unit/test_localization.gd",
 	"res://tests/unit/test_dice.gd",
