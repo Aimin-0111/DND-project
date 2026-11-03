@@ -1,6 +1,7 @@
 extends RefCounted
 ## The HUD's gear button and the settings dialog, on a test settings file:
-## masked key field, Save, Clear, Cancel, the HUD's AI mode line and notice.
+## masked key field, Save, Clear, Cancel and the HUD's AI mode line. Own-key
+## messages are on the status line now (test_status_line.gd), not in the HUD.
 
 const TEST_SETTINGS := "user://__test_settings_dialog.cfg"
 const FAKE_KEY := "FAKE-KEY-FOR-TESTS"
@@ -12,7 +13,6 @@ func run() -> Array:
 	if tree == null:
 		return ["no SceneTree available"]
 	var content = tree.root.get_node("Content")
-	var dm = tree.root.get_node("DM")
 	var real_settings: String = content.settings_path
 	var start_language: String = content.language()
 	content.settings_path = TEST_SETTINGS
@@ -22,7 +22,6 @@ func run() -> Array:
 	tree.root.add_child(hud)
 	var gear: Button = hud.get_node("VBox/Actions/SettingsButton")
 	var mode_line: Label = hud.get_node("VBox/AiMode")
-	var notice: Label = hud.get_node("VBox/AiNotice")
 	var dialog: Control = hud.get_node("SettingsLayer/SettingsDialog")
 	var mode_option: OptionButton = dialog.get_node("Center/Panel/Margin/VBox/ModeOption")
 	var key_field: LineEdit = dialog.get_node("Center/Panel/Margin/VBox/KeyRow/KeyField")
@@ -93,12 +92,8 @@ func run() -> Array:
 	if dialog.visible or after_cancel.mode != SettingsStore.MODE_OWN_KEY or after_cancel.api_key != "":
 		failures.append("Cancel should close without saving")
 
-	dm.connection_notice.emit("Test notice")
-	if not notice.visible or notice.text != "Test notice":
-		failures.append("the HUD should show the own-key notice")
-	dm.connection_notice.emit("")
-	if notice.visible:
-		failures.append("an empty notice should hide it")
+	if hud.get_node_or_null("VBox/AiNotice") != null:
+		failures.append("the HUD should have no own-key message line (SPEC-main-screen: the status line shows them)")
 
 	var other := "en" if start_language == "fr" else "fr"
 	content.set_language(other)

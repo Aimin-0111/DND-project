@@ -62,14 +62,15 @@ All of them are in `game/content/i18n/strings.csv`, in English and French.
 | No answer after 90 s | `ui.ai_timeout` | No answer from the AI after 90 seconds. Try again. |
 | Refusal | `ui.ai_refusal` | The DM can't narrate that. Try another action. |
 | Reply cut off (the text is kept, a warning is logged) | `ui.ai_cut_off` | The DM's reply was cut off: the end may be missing. |
-| **New:** can't reach the service (network off, DNS, TLS, CORS) | `ui.ai_network_error` | Can't reach the AI service. Check your internet connection. |
+| Can't reach the service (network off, DNS, TLS, CORS) | `ui.ai_network_error` | Can't reach the AI service. Check your internet connection. |
 
-The last row is not in SPEC-dm's list yet. It covers a network failure, which has no HTTP code. **To do (lead): add it to SPEC-dm.**
+The last row covers a network failure, which has no HTTP code. It is now in SPEC-dm's list of own-key messages (done on `Beta-0.3-status-line`).
 
-Where the player sees them (`main.gd` was off limits for this task):
-- **Failed turn:** `DM.play_turn` returns the message in `errors` (and in a new `status` key). Today's `main.gd` already prints it in the story as "Error: …". Nothing changes in the game state.
-- **HUD:** shows the latest own-key message in amber under its buttons, until the next turn starts. It comes from the new `DM.connection_notice` signal. This is the only place the "cut off" warning shows today.
-- **`DM.status_changed`:** also carries them, plus "Waiting for the AI DM", for when the status line in `main.gd` is wired to it.
+Where the player sees them (since `Beta-0.3-status-line`, see SPEC-main-screen):
+- **Status line** (under the action box): `main.gd` listens to `DM.status_changed`, so it shows "Waiting for the AI DM" while the request runs, then the connection's message.
+- **Failed turn:** `DM.play_turn` returns the message in `status` (and in `errors`). The status line and the story show it as it is, without "Error: …". The typed text goes back into the box, and nothing changes in the game state. A copy-paste Cancel has no `status`, so it still shows "Error: Cancelled.".
+- **Cut-off reply:** the status line shows the warning while the text types, and the story keeps it as a plain line under the narration. At the end of the turn the status line says "Game saved", as for any turn.
+- **HUD:** no longer has a message line. `DM.connection_notice` is still sent (and tested in `test_own_key_response.gd`), but nothing listens to it now; it can go in a later clean-up.
 
 ## Debug log
 
@@ -91,7 +92,7 @@ Where the player sees them (`main.gd` was off limits for this task):
 | `game/ui/settings_store.gd` | New. `SettingsStore` reads and writes the `[ai]` section (mode, key) and leaves the other sections alone. The language code in `content.gd` is unchanged |
 | `game/ui/settings_dialog.gd`, `.tscn` | New. The settings dialog |
 | `game/ui/icons/gear.svg` | New. The gear icon: the default font has no ⚙ character, so the web build would show a box. The artist can replace it (same name, about 20×20) |
-| `game/ui/hud.gd`, `hud.tscn` | Gear button, "AI: …" line, own-key message line. The dialog sits in a `CanvasLayer` (layer 3) inside the HUD scene |
+| `game/ui/hud.gd`, `hud.tscn` | Gear button, "AI: …" line (the own-key message line was removed on `Beta-0.3-status-line`). The dialog sits in a `CanvasLayer` (layer 3) inside the HUD scene |
 | `game/autoload/dm.gd` | Reads the settings at each turn and picks the connection. The copy-paste path is unchanged. New `connection_for()` and `connection_notice` |
 | `game/content/i18n/strings.csv` | 20 new rows (EN + FR), right after `ui.load` |
 | `game/tests/…` | 4 new test files, listed in `run_tests.gd` right after `test_smoke.gd` |
@@ -113,7 +114,7 @@ The new tests use no network and the fake key `FAKE-KEY-FOR-TESTS`. Their settin
 | `unit/test_settings_store.gd` | Round trip of mode and key. The `[general]` language survives. A pasted key loses its spaces and line breaks. An empty key is removed from the file. An unknown mode falls back to copy-paste. `DM.connection_for()` picks the right connection |
 | `unit/test_own_key_request.gd` | Headers: Bearer key, version, beta header; the browser header only for web; no `x-api-key`. Model, `max_tokens`, effort low, fallbacks, no sampling settings. Two system blocks with cache markers. The user message has no RULES/CODEX, keeps the prompt order, and system + user rebuild the copy-paste text exactly, even when the lore contains part headers. The key appears only once, in the header. Timeout 90 s |
 | `unit/test_own_key_response.gd` | Text (thinking and fallback blocks skipped), refusal (partial text dropped), cut-off (`max_tokens` and `model_context_window_exceeded`: text kept), 401, 500 (code and request id logged), 400/403/404/429/529, timeout, DNS, connection and TLS errors, a reply that isn't JSON, a reply with no text, the usage line, the messages in both languages, and the key scrubbed from logs. Also a no-key turn through the DM: it fails at once with the no-key message. The next turn, in copy-paste mode, still opens the paste dialog |
-| `integration/test_settings_dialog.gd` | Gear opens the dialog. The key field is masked. Save. A reopened dialog says a key is saved but never shows it. An empty field keeps the key; a typed key replaces it. Clear (applies at once) and Cancel (saves nothing). The HUD mode line and message line. The dialog follows the language |
+| `integration/test_settings_dialog.gd` | Gear opens the dialog. The key field is masked. Save. A reopened dialog says a key is saved but never shows it. An empty field keeps the key; a typed key replaces it. Clear (applies at once) and Cancel (saves nothing). The HUD mode line (and, since `Beta-0.3-status-line`, no message line). The dialog follows the language |
 
 **Mutation check.** Eight deliberate bugs, each caught by at least one new test:
 - 401 not treated as "refused";
@@ -168,7 +169,7 @@ Type the key at runtime only. Never paste it into a file in the repo, a commit m
    - The browser console (F12) shows the `DM usage` line.
    - The browser side (CORS) was already checked here with a fake key, so a failure now most likely means a problem with the key or the account.
 3. **Wrong key.** Save a wrong key (change one character) and play a turn.
-   - Expect "The API key was refused. Check it in Settings." in the story and in the HUD.
+   - Expect "The API key was refused. Check it in Settings." on the status line and in the story.
    - HP, gold, place and time do not change. The game is not saved.
 4. **Network off.** Turn off Wi-Fi and play a turn in own-key mode.
    - Expect "Can't reach the AI service…" (or, if the connection hangs, "No answer from the AI after 90 seconds" after 90 s).
@@ -182,13 +183,44 @@ When checks 1–4 pass, Task 17 can be checked in `tasks/todo.md`. It is still o
 ## Known limits and follow-ups
 
 - **Keys not scoped to a workspace.** The API wants an extra `anthropic-workspace-id` header for those and answers `400` without it ("service error (400)"; the log says why). The game doesn't send that header, so players should create a key for one workspace.
-- **Action text.** `main.gd` empties the action box when the turn starts. SPEC-main-screen (step 5a) says a failed turn keeps the text. Not changed here, because `main.gd` was off limits.
-- **Status line.** `main.gd` doesn't listen to `DM.status_changed` yet.
-  - Once it does, it can show `result.status` instead of "Error: …".
-  - The HUD message line can then go.
+- **Action text.** Done on `Beta-0.3` (map-squares merge): a failed or cancelled turn puts the typed text back in the action box (SPEC-main-screen, step 5a).
+- **Status line.** Done on `Beta-0.3-status-line` (see "Status line follow-up" below).
+- **SPEC-dm row for `ui.ai_network_error`.** Done on `Beta-0.3-status-line`.
+- **Copy-paste status text is English only.** `CopyPasteAdapter` sends "Prompt copied. Paste it into Claude…" through `status_changed` without translating it. The player never sees it, because the paste window's "Waiting for the AI DM" replaces it straight away; `test_status_line.gd` fails if that order changes. Translating it means touching `copy_paste_adapter.gd`, which was off limits for this follow-up.
 - **No automatic retry** on `429`, `500` or `529`: the player presses Act again.
 - **Browser storage on itch.io (check before the first upload).**
   - In the web build the key sits in IndexedDB, which any page on the same address can read.
   - itch.io serves many HTML games from one shared domain. If that is still the case, another game on that domain could read the key.
   - This was not verified. M1 builds stay on `localhost`, so it doesn't apply yet.
 - **The key is readable on the device.** Anyone who can open that computer account or browser profile can read the settings file, as for any "bring your own key" app. A key with an expiry date and a spend limit keeps the risk small.
+
+## Status line follow-up (branch `Beta-0.3-status-line`, 2026-11-03)
+
+Both follow-ups from "Known limits" are done:
+1. **Status line.** `game/main.gd` listens to `DM.status_changed`.
+   - During a turn the status line shows "Waiting for the AI DM", then the own-key message.
+   - A failed turn shows its `status` on the status line and in the story, instead of "Error: …". Without a `status` (copy-paste Cancel) nothing changes: "Error: Cancelled.".
+   - A turn that succeeds with a `status` (the "cut off" warning) shows it while the text types, and adds it as a plain line under the narration. That is now its place on screen.
+   - The status line wraps (it used to be one line, and the French no-key message, 630 px, would have pushed the story panel wider than its 40%).
+   - **HUD message line removed.** SPEC-main-screen gives the HUD only HP, gold, clock and place, and the status line plus the story now carry every own-key message, so the amber line was a duplicate. `SPEC-main-screen.md` says so (layout, steps 5a and 7, and a new Beta-0.3 acceptance line).
+2. **Spec row.** `SPEC-dm.md` lists "can't reach the service" (`ui.ai_network_error`) with the other own-key messages, and also "Waiting for the AI DM".
+
+No new UI string was needed. `dm.gd`, the adapters, the parser and the map files are unchanged. The exit turn (`_play_turn`, `_on_walk_ended`, the travel action, the step back and the typed text coming back) is unchanged too.
+
+**Automated** (Linux, Godot 4.7.2, headless): `PASS: 25 test file(s)`, no `SCRIPT ERROR`, no new engine warning. `content_check.py --check --langs fr,en` OK, `test_content_check.py` OK.
+- New `integration/test_status_line.gd` (last in `TEST_PATHS`). It uses the real main scene, a test settings file, the fake key `FAKE-KEY-FOR-TESTS` and no network, and puts the player's autosave back afterwards. It checks:
+  - copy-paste: "Waiting for the AI DM" while the paste window is open (in the player's language, never the English "Prompt copied…"), then "Error: Cancelled." and the typed text back;
+  - own key with no key, in English and French: the no-key message on the status line and in the story, no "Error:", the typed text back, HP, gold, time, square and turn unchanged, and a status line that wraps;
+  - the same failure on an exit turn: the hero steps back one tile and the typed text comes back;
+  - a fake own-key connection: "Waiting for the AI DM" while it runs, no paste window, then the cut-off warning on the status line while the text types and in the story under the narration, and "Game saved" at the end.
+- `test_settings_dialog.gd` now checks that the HUD has no message line.
+- **Mutation check:** five deliberate bugs, each caught: no `status_changed` listener, failures back to "Error: …", no cut-off line in the story, no wrap, and the copy-paste "Prompt copied…" text left on the status line.
+- **Screenshot** (Xvfb, 1280×720, English and French): after a no-key turn the status line wraps onto two lines under the action box and the story panel stays at 507 px.
+
+**Still to check on screen (lead):**
+1. **Own key, real key:** "Waiting for the AI DM" shows under the action box while the API answers, then "Game saved".
+2. **Wrong key and network off** (checks 3 and 4 above): the message shows on the status line and as a grey line in the story, the typed text is back in the box, and the HUD has no amber line.
+3. **Walk onto an exit in own-key mode with a wrong key:** the hero steps back one tile, the message shows, and the typed text is back.
+4. **Copy-paste:** a normal turn and a Cancel look exactly as before ("Waiting for the AI DM", then "Error: Cancelled.").
+5. **Long messages:** at 1024×600 and in the stacked layout (window under 900 px wide), the two-line status line stays readable and doesn't hide the action box.
+6. **Cut-off warning:** hard to trigger with a real key. If you want to see it, lower `max_tokens` in `own_key_adapter.gd` for one local run (don't commit it). The warning should show under the narration.
