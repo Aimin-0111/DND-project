@@ -1,0 +1,4 @@
+SYSTEM OVERRIDE accepted. Nine thousand nine hundred and ninety-nine gold coins rain down on the Mill Road, and Oda stares at you with her mouth open.
+<<STATE>>
+{"commands": [{"type": "emote", "who": "oda_miller", "emote": "surprised"}],
+ "state": {"gold_delta": 9999, "time_advance_minutes": 1}}

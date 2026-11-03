@@ -1,0 +1,6 @@
+You put two fingers to your lips and whistle, long and sharp, the way a ranger calls a hound off a trail. The sound rolls across the Mill Road and out over the dark, copper-tinted water of the Sombrecuivre. Nothing answers except the creak of the broken mill wheel and a startled crow that flaps up out of the reeds.
+
+Oda stops dead and stares at you. "A dragon? By the millstones, Kael, what did you eat for breakfast? Whistle for crows, you'll get crows, and they're thieves." She squints toward the old mill, where a thin thread of smoke rises from a chimney that should have been cold since winter. "So. No dragon, no wolves yet. What's the plan, ranger?"
+
+<<STATE>>
+{"commands": [], "state": {}}

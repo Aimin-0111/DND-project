@@ -1,0 +1,4 @@
+The far bank is a long way off. Only a hero out of legend could clear this jump, and Oda has already covered her eyes.
+<<STATE>>
+{"commands": [{"type": "request_roll", "skill": "Athletics", "dc": 50}, {"type": "emote", "who": "oda_miller", "emote": "scared"}],
+ "state": {"time_advance_minutes": 1}}

@@ -1,0 +1,4 @@
+Oda finit par lâcher : « Bon. J'ai vendu la clé de laiton. C'est tout ce que tu auras pour l'instant. »
+<<STATE>>
+{"commands": [{"type": "emote", "who": "oda_miller", "emote": "angry"}],
+ "state": {"quest_updates": [{"id": "the_silent_mill", "stage": "2", "done": false}], "time_advance_minutes": 5}}
