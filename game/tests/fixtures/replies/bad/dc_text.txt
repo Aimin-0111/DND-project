@@ -1,0 +1,4 @@
+Oda croise les bras et te toise. « Convaincs-moi, ranger. Et vite. »
+<<STATE>>
+{"commands": [{"type": "request_roll", "skill": "Persuasion", "dc": "13"}, {"type": "emote", "who": "oda_miller", "emote": "angry"}],
+ "state": {"time_advance_minutes": 5}}

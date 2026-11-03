@@ -1,0 +1,6 @@
+La pluie se met à tomber sur la Route du Moulin. Oda remonte son châle sur sa tête : « Les meules ! Pas un temps à laisser un chien dehors. »
+<<STATE>>
+```json
+{"commands": [{"type": "weather", "kind": "rain"}, {"type": "emote", "who": "oda_miller", "emote": "angry"}],
+ "state": {"time_advance_minutes": 10}}
+```

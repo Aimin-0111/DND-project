@@ -1,0 +1,4 @@
+You whistle, long and sharp. A shadow sweeps over the river as your dragon answers the call and lands on the road in a gust of hot air.
+<<STATE>>
+{"commands": [{"type": "spawn", "creature": "dragon", "near": "mill_road"}, {"type": "emote", "who": "hero", "emote": "happy"}],
+ "state": {}}

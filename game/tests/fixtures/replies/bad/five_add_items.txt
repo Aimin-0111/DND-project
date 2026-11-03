@@ -1,0 +1,4 @@
+Behind the flour sacks you find a tallow candle, a brass key, a healing draught, a hunting bow and an old leather coat.
+<<STATE>>
+{"commands": [],
+ "state": {"add_items": ["tallow_candle", "brass_key", "healing_draught", "hunting_bow", "leather_coat"], "time_advance_minutes": 15}}

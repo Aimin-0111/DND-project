@@ -18,6 +18,7 @@ const TEST_PATHS := [
 	"res://tests/unit/test_prompt_builder.gd",
 	"res://tests/unit/test_dm_reply_parser.gd",
 	"res://tests/unit/test_archived_replies.gd",
+	"res://tests/unit/test_bad_replies.gd",
 	"res://tests/integration/test_scene_layout.gd",
 	"res://tests/integration/test_ui_actions.gd",
 ]

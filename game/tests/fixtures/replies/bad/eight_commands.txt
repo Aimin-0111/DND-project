@@ -1,0 +1,13 @@
+Everything happens at once. Fog rolls off the river, a rust wolf slinks out of the reeds by the bridge, and Oda grabs your sleeve.
+<<STATE>>
+{"commands": [
+   {"type": "move_to", "target": "mill_bridge"},
+   {"type": "weather", "kind": "fog"},
+   {"type": "spawn", "creature": "rust_wolf", "near": "mill_bridge"},
+   {"type": "emote", "who": "oda_miller", "emote": "scared"},
+   {"type": "request_roll", "skill": "Perception", "dc": 12},
+   {"type": "emote", "who": "hero", "emote": "surprised"},
+   {"type": "spawn", "creature": "rust_wolf", "near": "mill_road"},
+   {"type": "weather", "kind": "storm"}
+ ],
+ "state": {"time_advance_minutes": 5}}
