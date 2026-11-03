@@ -21,6 +21,7 @@ const TEST_PATHS := [
 	"res://tests/integration/test_scene_layout.gd",
 	"res://tests/integration/test_ui_actions.gd",
 	"res://tests/unit/test_map_content.gd",
+	"res://tests/unit/test_square_generator.gd",
 ]
 
 

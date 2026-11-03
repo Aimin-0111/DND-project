@@ -116,6 +116,21 @@ func neighbour(id: String, direction: String) -> String:
 	return square_id(at.x, at.y)
 
 
+## What the generator needs to know about the four squares around `id`:
+## direction -> {"square", "kind", "can_enter", "hand_made"}.
+func neighbour_info(id: String) -> Dictionary:
+	var out := {}
+	for direction in DIRECTIONS:
+		var next := neighbour(id, direction)
+		out[direction] = {
+			"square": next,
+			"kind": kind_of(next),
+			"can_enter": can_enter(next),
+			"hand_made": is_hand_made(next),
+		}
+	return out
+
+
 ## A copy of a hand-made square's tiles (empty when not hand-made or broken).
 func hand_made_tiles(id: String) -> PackedByteArray:
 	if not hand_made.has(id):
