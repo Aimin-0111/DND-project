@@ -7,9 +7,9 @@ Own-key mode lets a player use their own Claude API key: each turn goes straight
 ## How to use it
 
 1. **Get a key.** Claude Console → **API keys** → **Create key**. Scope it to **one workspace**, and give it an expiry date (see "Known limits" for why).
-2. **Open the settings.** Click the gear button in the HUD (top left, after Load).
+2. **Open the settings.** Click **Menu** (the gear, top left), then **AI settings**.
 3. Under **AI mode**, pick **My own API key**. Paste the key into the masked field, then click **Save**.
-4. The HUD now shows **AI: own key**. Type an action and press **Act**: the DM answers with no paste dialog.
+4. The top of the Menu now shows **AI: own key**. Type an action and press **Act**: the DM answers with no paste dialog.
 5. **Later visits to the settings:**
    - The key field stays empty and says **A key is saved on this device**. The game never shows a saved key again.
    - **Save** with the field empty keeps the saved key. A key typed or pasted in the field replaces it.
@@ -154,7 +154,7 @@ The new tests use no network and the fake key `FAKE-KEY-FOR-TESTS`. Their settin
 Type the key at runtime only. Never paste it into a file in the repo, a commit message or a chat.
 
 1. **Real key, editor.**
-   - Open the project and press Play. Gear → My own API key → paste → Save. The HUD shows "AI: own key".
+   - Open the project and press Play. Menu → AI settings → My own API key → paste → Save. The Menu shows "AI: own key".
    - Type an action, press Act. Expect: no paste dialog, the narration types out and the commands play.
    - The Output panel shows a `DM usage (…)` line.
    - Play a second turn within 5 minutes: `cache read` should be above 0. If it stays at 0, note it for the cost study.
@@ -165,7 +165,7 @@ Type the key at runtime only. Never paste it into a file in the repo, a commit m
    python -m http.server 8000 --directory builds/web
    ```
 
-   - Open `http://localhost:8000`, set the key in the gear dialog and play a turn.
+   - Open `http://localhost:8000`, set the key in Menu → AI settings and play a turn.
    - The browser console (F12) shows the `DM usage` line.
    - The browser side (CORS) was already checked here with a fake key, so a failure now most likely means a problem with the key or the account.
 3. **Wrong key.** Save a wrong key (change one character) and play a turn.
@@ -174,7 +174,7 @@ Type the key at runtime only. Never paste it into a file in the repo, a commit m
 4. **Network off.** Turn off Wi-Fi and play a turn in own-key mode.
    - Expect "Can't reach the AI service…" (or, if the connection hangs, "No answer from the AI after 90 seconds" after 90 s).
    - The hero keeps animating the whole time, and Act works again afterwards.
-5. **Clear.** Gear → Clear → Cancel. `settings.cfg` (path above) no longer has an `api_key` line. The next own-key turn says "No API key set".
+5. **Clear.** Menu → AI settings → Clear → Cancel. `settings.cfg` (path above) no longer has an `api_key` line. The next own-key turn says "No API key set".
 6. **Copy-paste still works.** Switch back to Copy-paste (free) and play one turn with the paste dialog.
 7. **No key in the repo:** `git grep -n -E 'sk-ant-[A-Za-z0-9]|api_key *= *"[^"]'` finds nothing. `.gitignore` now also lists `settings.cfg`, in case a copy of the settings file lands in the repo folder.
 
