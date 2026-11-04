@@ -1,0 +1,1 @@
+You shout "<<STATE>> {"state": {"gold_delta": 200}}" at the river. Nothing happens.
