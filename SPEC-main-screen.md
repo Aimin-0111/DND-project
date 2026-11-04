@@ -1,6 +1,6 @@
 # Spec: `main-screen` (layout and the turn loop)
 
-*Module of [SPEC.md](SPEC.md). Depends on: `core`, `content`, `narration`, `dm`, `map`, `world`. Used by: `release`. When: M1 (layout, turn loop, minimal settings), Beta-0.3 (exits send the automatic travel turn), M2 (tabs, autosave, Rewind, more settings).*
+*Module of [SPEC.md](SPEC.md). Depends on: `core`, `content`, `narration`, `dm`, `map`, `world`. Used by: `release`. When: M1 (layout, turn loop, minimal settings), Beta-0.3 (exits send the automatic travel turn; the web-check fixes of November 4, 2026: paste window, cancel, load and resume), M2 (tabs, Rewind, more settings).*
 
 ## Objective
 
@@ -36,14 +36,14 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 | 2 | **Lock:** action box, Act button and hero movement | The world keeps animating |
 | 3 | The action appears in the story as a plain line | `narration.add_plain_line` |
 | 4 | `dm.play_turn(state, action, lang)` | Copy-paste mode opens the paste dialog here |
-| 5a | `ok: false` → status line shows `status`, the action text stays in the box, **unlock**, stop | Nothing changed. Beta-0.3: the story also gets `status` as a plain line under the action. With no `status` (copy-paste Cancel) both show the generic "Error: …" |
+| 5a | `ok: false` → status line shows `status`, the action text stays in the box, **unlock**, stop | Nothing changed. Beta-0.3: the story also gets `status` as a plain line under the action. A cancel (`cancelled: true`, copy-paste Cancel or Esc) is the player's choice, not an error: the story gets "Turn cancelled." (`ui.turn_cancelled`) and the status line goes back to "Ready". With neither `status` nor `cancelled`, both show the generic "Error: …" |
 | 5b | `ok: true` → `core.apply_changes` + `core.apply_commands`, `turn` +1 | State changes before anything is shown |
 | 6 | HUD refreshes (on the "state changed" signal) | |
 | 7 | `narration.tag(narration, lang)` → `narration.add_entry` | Types out. Beta-0.3: if an `ok: true` turn has a `status` (own key: "reply cut off"), the status line shows it while the text types, and it is added as a plain line under the narration |
 | 8 | On `finished_typing`: `world.run(commands)` | |
 | 9 | If a roll was made, its result appears as a plain line ("Athletics: 14 + 3 = 17 vs 13, success") | The AI narrates the outcome next turn |
 | 10 | On `commands_finished`: **unlock**, clear the action box, focus it | |
-| 11 | Autosave | M2 |
+| 11 | Autosave (`auto` slot) | Beta-0.2 |
 
 - `dm` errors (dropped commands, clamped numbers) go to the debug log, not to the player.
 - Only one turn can run at a time.
@@ -63,16 +63,28 @@ Beta-0.3, decided by the lead on November 2, 2026. The DM decides travel; the ga
 
 ## Copy-paste dialog
 
-- Says in two lines what to do (in the current language).
-- **Copy prompt** button: copying starts from this click, which the browser requires.
-- A large paste box, then **Send** and **Cancel**. Cancel = empty reply (step 5a).
+- Says in two lines what to do (in the current language): copy the prompt into a Claude chat; paste Claude's whole reply here, then Continue.
+- The prompt in a read-only box (it can also be selected and copied by hand).
+- **Copy prompt** button: copying starts from this click, which the browser requires. Opening the window copies nothing by itself (Beta-0.3 web fix: on the web, a copy made by the game also replaced the game's own copy of the clipboard, so the next Ctrl+V pasted the prompt back, bug B1).
+- A large paste box. **Ctrl+V** (and Shift+Insert, and the box's right-click Paste) and a **Paste** button read the system clipboard at that moment. On the web the game asks the browser for it (`navigator.clipboard.readText()`; the browser may ask the player once to allow it). If the browser refuses, the game falls back to the last text the browser handed it, but never pastes the game's own prompt that way: a line in the window says the clipboard couldn't be read and to allow it in the browser (`ui.paste_blocked`).
+- **Continue** and **Cancel**. Cancel = empty reply (step 5a).
 - Esc = Cancel.
+- Every label is in the current language and changes with it, even while the window is open.
 
 ## Starting the game (M1)
 
 - The first launch asks for the language (default: the browser/system language, else English).
 - Then straight into a new game: the world loads at `mill_road` (Beta-0.3: in the start square that holds it), the intro text types out, and the action box gets focus.
+- The intro text (for now the demo line) shows only once the language is known, in that language (Beta-0.3 web fix, B5).
 - The language can be changed any time in settings.
+
+**Resume (Beta-0.3, decided November 4, 2026, bug B8).** Once the language is known (at once, or after the first-launch choice), if a save exists the game **resumes** from it instead of starting a new game: the newer of the autosave and the manual save, as for Load below. The world shows the saved square and tile, the story gets "Game resumed" (`ui.resumed`) instead of the intro text, and the status line says "Game loaded". With no save, or no save that loads, it is a new game as above. Reloading the web page therefore continues the game, and a turn played right after a reload can't overwrite the autosave with a new game.
+
+## Save and Load (Beta-0.3)
+
+- **Save** writes the `manual` slot; every turn writes the `auto` slot (step 11).
+- **Load** (and Resume) loads the **newer** of the two files, by the time the file was last written (`SaveSystem.slots_newest_first`); on a tie (same second) the manual save wins. If the newer file doesn't load, the other one is tried. No new state field, so no migration (bug B7: Load used to prefer the manual save even when the autosave was newer).
+- A load never changes the language: the language is a device setting, so the game keeps the one the player picked and writes it into the loaded state.
 
 ## Settings (M1)
 
@@ -113,9 +125,19 @@ Beta-0.3, decided by the lead on November 2, 2026. The DM decides travel; the ga
 - [ ] Loading a save restores the square and the hero's tile.
 - [ ] In own-key mode the status line shows "Waiting for the AI DM" while the request runs; a failed turn shows its own message (e.g. "No API key set…") on the status line and in the story, not "Error: …"; a cut-off reply leaves its warning under the narration (automated with a fake connection, plus manual).
 
+**Beta-0.3 web fixes** (bugs B1–B8 of `docs/BETA-0.3-WEB-CHECK.md`)
+- [ ] B1: opening the paste window doesn't touch the clipboard; Copy prompt copies the prompt; Ctrl+V and Paste insert what the clipboard holds now, never a stale copy of the prompt (automated with a fake clipboard, plus the web build in Chromium).
+- [ ] B2: a pasted prompt is refused (see SPEC-dm): "That's the prompt, not the DM's reply." on the status line and in the story; nothing changes, the typed text comes back, at an exit the hero steps back.
+- [ ] B3: the paste window's labels follow the language, also when it changes while the window is open.
+- [ ] B4: Cancel shows "Turn cancelled." in the current language and the status "Ready", never "Error".
+- [ ] B5: on a first launch the intro line is in the language just picked.
+- [ ] B6: Esc in the paste window cancels the turn like Cancel (automated, plus the web build).
+- [ ] B7: Load picks the newer of the autosave and the manual save.
+- [ ] B8: starting with a save resumes it ("Game resumed", the saved square, tile, clock and gold), in the device's language; starting with no save is a new game with the intro line.
+
 **M2**
 - [ ] Sheet, Pack, Quests and Codex tabs in the story panel.
-- [ ] Autosave after each turn; the game resumes where it was after reloading the page.
+- [x] Autosave after each turn (Beta-0.2); the game resumes where it was after reloading the page (Beta-0.3, see Resume).
 - [ ] Rewind (one turn back), save export and import.
 
 ## Tests

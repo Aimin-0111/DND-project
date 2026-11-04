@@ -87,7 +87,7 @@ Names are provisional (GDScript style); the behaviour is the contract.
 | `clock_text(time_minutes, lang) -> text` | "Day 1, 08:00" / "Jour 1, 08:00" | M1 |
 | Dice: `roll(sides, count, bonus)`, `roll_notation("2d6+3")`, `check(modifier, dc, advantage)` | Seeded; `check` always rolls two d20s so the sequence doesn't depend on advantage | M1 |
 | `snapshot(state) -> copy` | Deep copy taken before each turn | M2 |
-| `save(state, slot)`, `load(slot)`, `export_text(state)`, `import_text(text)` | JSON saves with migrations. **v1 → v2:** adds `square: ""`, `hero_cell: []`, `squares: {}` and `square: ""` on each creature; `settle` then fills them from the v1 `location` and the creatures' places | M2 (v1 → v2: Beta-0.3) |
+| `save(state, slot)`, `load(slot)`, `export_text(state)`, `import_text(text)` | JSON saves with migrations. Slots: `manual` (Save button) and `auto` (every turn). `slots_newest_first(slots)` lists the slots that have a file, the last written first (file time; on a tie the earlier slot in the list), for Load and Resume (Beta-0.3). The save folder can be pointed elsewhere for tests. **v1 → v2:** adds `square: ""`, `hero_cell: []`, `squares: {}` and `square: ""` on each creature; `settle` then fills them from the v1 `location` and the creatures' places | M2 (v1 → v2: Beta-0.3) |
 
 ## Acceptance criteria
 

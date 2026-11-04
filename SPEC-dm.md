@@ -17,7 +17,8 @@ TurnResult = {
   commands: [...],     # checked commands, in order
   changes: {...},      # checked state changes
   errors: [...],       # what was dropped or clamped, for the debug log
-  status: text         # message for the player when ok is false
+  status: text,        # message for the player when ok is false
+  cancelled: bool      # Beta-0.3: true when the player cancelled (copy-paste); no status then
 }
 ```
 
@@ -86,7 +87,8 @@ Unknown keys are ignored and noted. `core` clamps again when applying (defence i
 
 | Case | Result |
 |---|---|
-| Empty reply (cancelled, network error, refusal) | `ok: false`, `status` explains; nothing changes |
+| Empty reply (cancelled, network error, refusal) | `ok: false`, `status` explains; nothing changes. A copy-paste cancel has no `status` but `cancelled: true` (Beta-0.3) |
+| The reply is the game's own prompt (it contains `=== TURN INPUT ===` or starts with `=== RULES ===`; Beta-0.3, bug B2) | Checked before parsing. `ok: false`, `status` = "That's the prompt, not the DM's reply." (`ui.reply_is_prompt`); nothing changes. Without this the `<<STATE>>` quoted in the RULES part made screens of rules into narration |
 | No `<<STATE>>` line | `ok: true`, narration only, no changes; noted |
 | `<<STATE>>` but invalid JSON | Same as above |
 
@@ -96,7 +98,7 @@ One interface: `generate_turn(prompt) -> reply text` (empty = no reply), plus st
 
 | Connection | How | When |
 |---|---|---|
-| **Copy-paste** | The prompt is turned into one text block and copied (the copy must start from a click: browsers require it). The player pastes it into their own Claude chat and pastes the reply back into a dialog. Cancel = empty reply. **Always kept working.** | M1 |
+| **Copy-paste** | The prompt is turned into one text block and copied when the player clicks **Copy prompt** (the copy must start from a click: browsers require it; Beta-0.3: opening the window copies nothing, see [SPEC-main-screen.md](SPEC-main-screen.md#copy-paste-dialog)). The player pastes it into their own Claude chat and pastes the reply back into a dialog. Cancel = empty reply. **Always kept working.** | M1 |
 | **Own key** | The player's own API key, stored only on their device. Model and settings from the AI cost study (Sonnet 5.5, effort low, prompt caching on the rules and Codex; see `examples/godot/ai/own_key_adapter.gd`). Token usage (input, cache read, output) is printed to the debug log for the cost study | M1 |
 | **Proxy client** | Calls our server (`proxy` module) with the contract below | M2 |
 

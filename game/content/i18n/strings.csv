@@ -75,3 +75,12 @@ travel.east,Je pars vers l'est ({kind}).,I head east ({kind}).
 travel.south,Je pars vers le sud ({kind}).,I head south ({kind}).
 travel.west,Je pars vers l'ouest ({kind}).,I head west ({kind}).
 ui.way_blocked,Impossible d'aller par là.,You can't go that way.
+ui.paste_help_1,1. Copie le prompt et colle-le dans une discussion avec Claude.,1. Copy the prompt and paste it into a Claude chat.
+ui.paste_help_2,"2. Copie toute la réponse de Claude, colle-la ici, puis appuie sur Continuer.","2. Copy Claude's whole reply, paste it here, then press Continue."
+ui.paste,Coller,Paste
+ui.prompt_copied,Prompt copié.,Prompt copied.
+ui.paste_blocked,"Le jeu ne peut pas lire le presse-papiers. Autorise l'accès dans le navigateur, puis réessaie.","The game can't read the clipboard. Allow access in your browser, then try again."
+ui.reply_is_prompt,"C'est le prompt, pas la réponse du MJ.","That's the prompt, not the DM's reply."
+ui.turn_cancelled,Tour annulé.,Turn cancelled.
+ui.resumed,Partie reprise,Game resumed
+story.demo_line,"La braise rouge, le givre bleu et l'éclair blanc.","The fire, the frost and the lightning."
