@@ -100,7 +100,7 @@ One interface: `generate_turn(prompt) -> reply text` (empty = no reply), plus st
 | **Own key** | The player's own API key, stored only on their device. Model and settings from the AI cost study (Sonnet 5.5, effort low, prompt caching on the rules and Codex; see `examples/godot/ai/own_key_adapter.gd`). Token usage (input, cache read, output) is printed to the debug log for the cost study | M1 |
 | **Proxy client** | Calls our server (`proxy` module) with the contract below | M2 |
 
-**Own-key status messages** (in the player's language): no key set, key refused (401), service error (other codes), no answer after 90 s, the DM can't narrate that (refusal), reply cut off (the text is kept, a warning is logged).
+**Own-key status messages** (in the player's language; keys `ui.ai_*` in `strings.csv`): no key set, key refused (401), service error (other codes), can't reach the service (no HTTP answer at all: network off, DNS, TLS or CORS; `ui.ai_network_error`), no answer after 90 s, the DM can't narrate that (refusal), reply cut off (the text is kept, a warning is logged). While the request runs, the connection also sends "Waiting for the AI DM" (`ui.waiting`).
 
 **Server contract for `proxy` (M2, defined here):** `POST /turn` with `{lang, codex, summary, state, map, allowed, last_roll, action}` returns `200 {text, truncated, usage}`; `422` refusal; `401` bad game token; `429` too many requests. The server holds the DM rules itself (generated from `dm-rules.md`).
 
