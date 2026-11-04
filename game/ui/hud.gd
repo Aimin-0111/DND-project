@@ -1,6 +1,8 @@
 extends PanelContainer
 ## Top-left HUD: HP, gold, clock, location, AI mode, language and save/load
-## actions, and the gear button that opens the settings dialog.
+## actions, and the gear button that opens the settings dialog. Own-key
+## messages show on the story panel's status line and in the story
+## (main.gd), not here.
 
 signal language_requested
 signal save_requested
@@ -15,20 +17,17 @@ signal load_requested
 @onready var save_button: Button = $VBox/Actions/SaveButton
 @onready var load_button: Button = $VBox/Actions/LoadButton
 @onready var settings_button: Button = $VBox/Actions/SettingsButton
-@onready var ai_notice_label: Label = $VBox/AiNotice
 @onready var settings_dialog: SettingsDialog = $SettingsLayer/SettingsDialog
 
 
 func _ready() -> void:
 	Game.state_changed.connect(_refresh)
 	Content.language_changed.connect(_on_language_changed)
-	DM.connection_notice.connect(_show_notice)
 	language_button.pressed.connect(func() -> void: language_requested.emit())
 	save_button.pressed.connect(func() -> void: save_requested.emit())
 	load_button.pressed.connect(func() -> void: load_requested.emit())
 	settings_button.pressed.connect(settings_dialog.open)
 	settings_dialog.saved.connect(_on_settings_saved)
-	_show_notice("")
 	_refresh_language()
 	_refresh(Game.state)
 
@@ -73,14 +72,7 @@ func _refresh_ai_mode() -> void:
 
 
 func _on_settings_saved() -> void:
-	_show_notice("")
 	_refresh_ai_mode()
-
-
-## Own-key messages (a failed or cut-off turn), shown until the next turn.
-func _show_notice(message: String) -> void:
-	ai_notice_label.text = message
-	ai_notice_label.visible = not message.is_empty()
 
 
 func _clock(minutes: int) -> String:

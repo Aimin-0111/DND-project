@@ -1,4 +1,4 @@
-# M1 AI test report — 2026-10-19, updated 2026-11-03
+# M1 AI test report — 2026-10-19, updated 2026-11-03 (parser fixes)
 
 ## What was tested
 
@@ -105,11 +105,14 @@ before this update.
 
 ## Found by the tests
 
-`dm_reply_parser.gd` was not changed: another session is editing it. These
-cases are left out of the passing tests. Checked with Godot 4.7.2 on Linux
-x86-64.
+Found with Godot 4.7.2 on Linux x86-64. **All four fixed on 2026-11-03 in
+commit `88a97aa`** (branch `Beta-0.3-parser-fixes`). Each input below is now a
+test in `test_bad_replies.gd` (`FOUND`), and each of those tests failed on the
+parser before the fix. The 8 archived Haiku replies and the 14 crafted bad
+replies give exactly the same result as before (narration, commands, state
+and notes, with Unix and Windows line breaks).
 
-### 1. Huge numbers are clamped to the wrong end
+### 1. Huge numbers are clamped to the wrong end — fixed 2026-11-03 (`88a97aa`)
 
 - **Input:** `{"state": {"gold_delta": 1e19, "hp_delta": 1e19, "time_advance_minutes": 1e19}}`
   after the marker. A 20-digit number such as `99999999999999999999` does the
@@ -126,8 +129,12 @@ x86-64.
 - **Effect:** if the AI obeyed an S6-style injection with a 20-digit amount,
   the hero would lose 200 gold and 30 HP instead of getting the capped
   +200 gold.
+- **Fix:** the number is cut toward zero (as `int()` does) and clamped as a
+  float, then turned into an int. Now: 200, 30, 1440, each noted as
+  `= 10000000000000000000.0 is out of range, clamped.` Tested with 1e19, a
+  20-digit amount, exactly 2^63, −1e19 (−200, −30, 0) and 1e400 (infinity).
 
-### 2. A huge quest stage is kept as a negative stage
+### 2. A huge quest stage is kept as a negative stage — fixed 2026-11-03 (`88a97aa`)
 
 - **Input:** `{"state": {"quest_updates": [{"id": "the_silent_mill", "stage": 1e19, "done": true}]}}`
 - **Expected** (SPEC-dm: a whole `stage` ≥ 0; bad entries dropped, noted):
@@ -137,8 +144,10 @@ x86-64.
 - **Why:** the same overflow as 1.
 - **Effect:** small. Core keeps the higher stage, so the quest doesn't go
   back, but `done: true` still applies.
+- **Fix:** a stage from 2^63 up is a bad entry: dropped and noted, so its
+  `done: true` doesn't apply. A good entry next to it is still kept.
 
-### 3. A marker inside a sentence counts as the marker
+### 3. A marker inside a sentence counts as the marker — fixed 2026-11-03 (`88a97aa`)
 
 - **Input A:** the narration quotes a marker the player typed, and the AI
   writes no block of its own:
@@ -154,8 +163,20 @@ x86-64.
   `The state block is not valid JSON.`
 - **Why:** `reply.find(MARKER)` takes the first `<<STATE>>` anywhere in the
   text, not a line that holds only the marker.
+- **Fix:** the marker is a line that holds exactly `<<STATE>>`: nothing
+  before it on its line, nothing after it but the line break (a `\r` before
+  it is allowed, for Windows line breaks). Input A is now narration only,
+  noted as `<<STATE>> is not on a line of its own`. Input B keeps the whole
+  sentence as narration and the fog command, with no note. Fixtures:
+  `bad/marker_in_sentence.txt` and `bad/marker_in_sentence_then_block.txt`.
+- **Rule picked where SPEC-dm is silent** (question for the lead below):
+  - spaces or tabs around the marker on its line make it not a marker
+    (narration only, noted);
+  - two or more marker lines: narration only (the text before the first
+    one), nothing applied, noted as `More than one <<STATE>> line`. The
+    reply doesn't say which block is the AI's, so none is applied.
 
-### 4. Unknown top-level keys are dropped without a note
+### 4. Unknown top-level keys are dropped without a note — fixed 2026-11-03 (`88a97aa`)
 
 - **Input:** `{"command": [{"type": "move_to", "target": "old_mill"}], "changes": {"gold_delta": 5}}`
   (wrong key names), or `[{"type": "move_to", "target": "old_mill"}]` (a list
@@ -167,6 +188,22 @@ x86-64.
   is empty, so the debug log doesn't say why the move was lost.
 - **Note:** SPEC-dm's "ignored and noted" line is written for keys inside
   `state`; this is the same rule one level up. Minor.
+- **Fix:** every key other than `commands` and `state` is noted as
+  `<<STATE>> block: unknown key '…' ignored.` The rest of the block still
+  applies. A list of commands is read as its first object (the parser keeps
+  the first `{` to the last `}`), so it is noted as the unknown keys `type`
+  and `target`.
+
+### Questions for the lead
+
+SPEC-dm says "a line with exactly `<<STATE>>`" but doesn't settle two cases.
+The parser takes the narrowest rule; say if you want it looser:
+
+1. **Spaces around the marker** (`  <<STATE>>  `): now not a marker, so the
+   reply is narration only. Allow spaces and tabs around it?
+2. **Two marker lines** (the narration quotes a player's injection on its own
+   line, then the AI writes its own block): now nothing applies. Use the last
+   marker line instead (the AI's own block comes last in the format)?
 
 ### Seen outside the parser
 
@@ -193,8 +230,9 @@ error line would get very long.
 
 ## Next steps
 
-1. Fix the four parser problems above, then add each input to
-   `test_bad_replies.gd` with its expected result.
+1. ~~Fix the four parser problems above, then add each input to
+   `test_bad_replies.gd` with its expected result.~~ Done 2026-11-03
+   (`88a97aa`). Answer the two marker questions above.
 2. Run S1, S6 and S8 **5–10 times each** with the real M1 prompt and record
    replies in a dated folder.
 3. The two rules proposed in `examples/ai-tests/RESULTS.md` (anti-invention
@@ -207,7 +245,7 @@ error line would get very long.
 
 ```bash
 godot --headless --path game --import
-godot --headless --path game --script res://tests/run_tests.gd   # expect: PASS: 15 test file(s)
+godot --headless --path game --script res://tests/run_tests.gd   # expect: PASS: 24 test file(s)
 ```
 
 Count any `SCRIPT ERROR` line as a failure, even if the runner prints PASS.

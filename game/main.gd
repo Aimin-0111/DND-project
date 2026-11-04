@@ -30,6 +30,9 @@ func _ready() -> void:
 	_fit_layout()
 	call_deferred("_fit_layout")
 	_localize()
+	# Own-key messages are long: the status line wraps rather than widening
+	# the story panel.
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_show_demo_line()
 	if not Content.has_language_choice():
 		_ask_language()
@@ -39,6 +42,7 @@ func _ready() -> void:
 	dialog.submitted.connect(func(text: String) -> void: DM.submit_reply(text))
 	dialog.cancelled.connect(func() -> void: DM.cancel_reply())
 	DM.prompt_ready.connect(_on_prompt_ready)
+	DM.status_changed.connect(_on_dm_status)
 	director.note.connect(_on_note)
 	director.roll_requested.connect(_on_roll_requested)
 	director.moved_to.connect(Game.set_location)
@@ -141,7 +145,7 @@ func _play_turn(action: String, typed: String, exit_direction: String) -> void:
 		if not exit_direction.is_empty():
 			Game.set_hero_cell(world.step_back())
 		_set_busy(false)
-		_show_errors(result.get("errors", []))
+		_show_failure(result)
 		return
 
 	var narration := str(result["narration"])
@@ -151,6 +155,11 @@ func _play_turn(action: String, typed: String, exit_direction: String) -> void:
 		story_log.add_entry(tagger.tag_option_c(narration))
 		await story_log.finished_typing
 		GameState.remember_narration(Game.state, narration)
+	# A turn can succeed with a message for the player (own key: the reply was
+	# cut off). It stays in the story, under the narration it is about.
+	var notice := str(result.get("status", ""))
+	if not notice.is_empty():
+		story_log.add_plain_line(notice)
 
 	var commands: Array = result.get("commands", [])
 	for note in Game.apply_turn(result.get("changes", {}), commands):
@@ -172,6 +181,14 @@ func _play_turn(action: String, typed: String, exit_direction: String) -> void:
 func _on_prompt_ready(prompt_text: String) -> void:
 	status_label.text = Content.t("ui.waiting")
 	dialog.open(prompt_text)
+
+
+## The connection's messages for the player during a turn ("Waiting for the
+## AI DM", why an own-key turn failed, a cut-off reply). Already translated;
+## "" means nothing to say.
+func _on_dm_status(message: String) -> void:
+	if _busy and not message.is_empty():
+		status_label.text = message
 
 
 func _on_note(message: String) -> void:
@@ -266,6 +283,18 @@ func _on_language_picked(lang: String, picker: Control) -> void:
 
 func _on_language_changed(_lang: String) -> void:
 	_localize()
+
+
+## A failed turn. The connection's own message (own key: "No API key set…")
+## goes on the status line and in the story as it is; without one (copy-paste
+## Cancel) the generic "Error: …" shows, as before.
+func _show_failure(result: Dictionary) -> void:
+	var status := str(result.get("status", ""))
+	if not status.is_empty():
+		status_label.text = status
+		story_log.add_plain_line(status)
+		return
+	_show_errors(result.get("errors", []))
 
 
 func _show_errors(errors: Array) -> void:

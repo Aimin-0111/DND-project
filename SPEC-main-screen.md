@@ -25,6 +25,7 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 - **Width ratio** 6:4. Target windows 1280×720 and 1920×1080; minimum 1024×600.
 - **HUD** over the world: HP, gold, clock text, current place name (all in the current language). Beta-0.3: between places, and in generated squares, the place label shows the square's kind instead ("Forest" / "Forêt", from `kind.<id>.name`).
 - **Action bar** under the story: text box ("What do you do?" / "Que fais-tu ?"), Act button, settings button, AI mode indicator. A status line above it shows messages like "The DM is thinking…".
+- **Status line** (Beta-0.3): during a turn it follows `dm`'s status messages ("Waiting for the AI DM", and in own-key mode the connection messages of [SPEC-dm.md](SPEC-dm.md#connections)). It wraps instead of widening the story panel. There is no separate message line in the HUD: own-key messages show on the status line and in the story (steps 5a and 7).
 - Portrait / phone layout (option B): M2 or later, depending on the team's answer to Q1.
 
 ## Contract: the turn loop
@@ -35,10 +36,10 @@ Put the pieces on one screen and run the **turn loop** that connects them: the p
 | 2 | **Lock:** action box, Act button and hero movement | The world keeps animating |
 | 3 | The action appears in the story as a plain line | `narration.add_plain_line` |
 | 4 | `dm.play_turn(state, action, lang)` | Copy-paste mode opens the paste dialog here |
-| 5a | `ok: false` → status line shows `status`, the action text stays in the box, **unlock**, stop | Nothing changed |
+| 5a | `ok: false` → status line shows `status`, the action text stays in the box, **unlock**, stop | Nothing changed. Beta-0.3: the story also gets `status` as a plain line under the action. With no `status` (copy-paste Cancel) both show the generic "Error: …" |
 | 5b | `ok: true` → `core.apply_changes` + `core.apply_commands`, `turn` +1 | State changes before anything is shown |
 | 6 | HUD refreshes (on the "state changed" signal) | |
-| 7 | `narration.tag(narration, lang)` → `narration.add_entry` | Types out |
+| 7 | `narration.tag(narration, lang)` → `narration.add_entry` | Types out. Beta-0.3: if an `ok: true` turn has a `status` (own key: "reply cut off"), the status line shows it while the text types, and it is added as a plain line under the narration |
 | 8 | On `finished_typing`: `world.run(commands)` | |
 | 9 | If a roll was made, its result appears as a plain line ("Athletics: 14 + 3 = 17 vs 13, success") | The AI narrates the outcome next turn |
 | 10 | On `commands_finished`: **unlock**, clear the action box, focus it | |
@@ -110,6 +111,7 @@ Beta-0.3, decided by the lead on November 2, 2026. The DM decides travel; the ga
 - [ ] A reply with `travel` fades to the destination and the hero stands on the arrival tile (manual).
 - [ ] The HUD place label shows the place, or the square's kind, in both languages.
 - [ ] Loading a save restores the square and the hero's tile.
+- [ ] In own-key mode the status line shows "Waiting for the AI DM" while the request runs; a failed turn shows its own message (e.g. "No API key set…") on the status line and in the story, not "Error: …"; a cut-off reply leaves its warning under the narration (automated with a fake connection, plus manual).
 
 **M2**
 - [ ] Sheet, Pack, Quests and Codex tabs in the story panel.
