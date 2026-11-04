@@ -7,7 +7,13 @@ extends RefCounted
 ##   the AI mode at the top, Esc and a click outside;
 ## - the Backpack button and B open the empty backpack window; Esc closes it;
 ## - typing "b", "m" or "1" in the focused action box only types the character;
-## - the dice zone: empty, centred in the world panel, ignores the mouse.
+## - the dice zone: empty, centred in the world panel, ignores the mouse;
+## - the minimap: 7 x 7 squares around the hero, kind colours from kinds.csv
+##   for visited squares, fog for the others and off the world, the red frame
+##   on the hero's square; it recentres after a travel and a load;
+## - the world map window: a click on the minimap or M opens it, the whole
+##   grid in the same colours with the hero marked; M, Esc, Close or a click
+##   outside closes it; a click on it never travels.
 ## A test settings file; the runner points the saves at a test folder.
 
 const TEST_SETTINGS := "user://__test_layout_v2.cfg"
@@ -47,6 +53,8 @@ func run() -> Array:
 	failures.append_array(_backpack_checks(main))
 	failures.append_array(_key_checks(main))
 	failures.append_array(_dice_zone_checks(main))
+	failures.append_array(_minimap_checks(main))
+	failures.append_array(_world_map_checks(main))
 
 	tree.root.remove_child(main)
 	main.free()
@@ -298,7 +306,7 @@ func _key_checks(main) -> Array:
 		viewport.push_input(_typed(letter), true)
 	if main.action_input.text != "bm1":
 		failures.append("typing b, m and 1 in the action box types them, got '%s'" % main.action_input.text)
-	if window.visible or main.menu.visible:
+	if window.visible or main.menu.visible or (main.get("world_map_window") != null and main.world_map_window.visible):
 		failures.append("typing in the action box opens nothing")
 
 	main.action_input.text = ""
@@ -348,6 +356,187 @@ func _dice_zone_checks(main) -> Array:
 		failures.append("a click on the dice zone should reach the world, %d did" % probe.clicks)
 	sub_viewport.remove_child(probe)
 	probe.free()
+	return failures
+
+
+## kinds.csv: kind id -> its colour.
+func _kind_colours() -> Dictionary:
+	var out := {}
+	for row in ContentLoader.load_csv("res://content/maps/kinds.csv"):
+		out[str(row.get("id", "")).strip_edges()] = Color.html(str(row.get("colour", "")).strip_edges())
+	return out
+
+
+## What a square should look like: its kind's colour when visited, else fog.
+func _expected(kinds: Dictionary, visited: Dictionary, at: Vector2i) -> Color:
+	var map: WorldMap = Game.world_map
+	if at.x < 0 or at.y < 0 or at.x >= map.width or at.y >= map.height:
+		return MapView.FOG
+	var id := WorldMap.square_id(at.x, at.y)
+	if not visited.has(id):
+		return MapView.FOG
+	return kinds.get(map.kind_of(id), MapView.FOG)
+
+
+## Index in the minimap's 7 x 7 cells of the square (dx, dy) from the hero's.
+func _around(dx: int, dy: int) -> int:
+	return (dy + 3) * 7 + (dx + 3)
+
+
+func _minimap_checks(main) -> Array:
+	var failures: Array = []
+	var world_panel: Control = main.get_node("Layout/Split/WorldPanel")
+	var minimap = world_panel.get_node_or_null("Minimap")
+	if minimap == null or main.get("minimap") != minimap:
+		return ["the world panel should hold the Minimap (main.minimap)"]
+	var rect: Rect2 = minimap.get_global_rect()
+	var panel_rect := world_panel.get_global_rect()
+	if rect.end.x < panel_rect.end.x - 24.0 or rect.position.y > panel_rect.position.y + 24.0 or not panel_rect.encloses(rect):
+		failures.append("the minimap sits at the top right of the world panel: %s in %s" % [rect, panel_rect])
+	if minimap.get_index() < world_panel.get_node("WorldView").get_index():
+		failures.append("the minimap is drawn over the world")
+	if MapView.FRAME_COLOUR.r < 0.7 or MapView.FRAME_COLOUR.g > 0.3 or MapView.FRAME_COLOUR.b > 0.3:
+		failures.append("the hero's frame is red, got %s" % MapView.FRAME_COLOUR)
+	var kinds := _kind_colours()
+
+	# A fake state: four visited squares around sq_24_24, the rest is fog.
+	var visited := {"sq_24_24": {}, "sq_25_24": {}, "sq_24_23": {}, "sq_21_21": {}}
+	minimap.refresh(Game.world_map, {"square": "sq_24_24", "squares": visited})
+	if minimap.cells.size() != 49 or minimap.columns != 7 or minimap.rows != 7:
+		return failures + ["the minimap shows 7 x 7 squares, got %d" % minimap.cells.size()]
+	var wrong := 0
+	for dy in range(-3, 4):
+		for dx in range(-3, 4):
+			if minimap.cells[_around(dx, dy)] != _expected(kinds, visited, Vector2i(24 + dx, 24 + dy)):
+				wrong += 1
+	if wrong != 0:
+		failures.append("minimap: %d of 49 squares have the wrong colour (visited: kind colour, else fog)" % wrong)
+	for id in visited:
+		var at := WorldMap.coords(id)
+		var want: Color = kinds.get(Game.world_map.kind_of(id), Color.BLACK)
+		if minimap.cells[_around(at.x - 24, at.y - 24)] != want:
+			failures.append("the visited square %s should be filled with its kind's colour %s" % [id, want])
+	if minimap.cells[_around(2, 2)] != MapView.FOG:
+		failures.append("an unvisited square is fog")
+	if minimap.frame_index != _around(0, 0):
+		failures.append("the red frame is on the hero's square (the middle), got %d" % minimap.frame_index)
+
+	# At the corner of the world: the squares off the world are fog.
+	minimap.refresh(Game.world_map, {"square": "sq_0_0", "squares": {"sq_0_0": {}, "sq_1_0": {}}})
+	for off in [_around(-1, 0), _around(0, -1), _around(-3, -3), _around(3, -1)]:
+		if minimap.cells[off] != MapView.FOG:
+			failures.append("squares off the world are fog (cell %d)" % off)
+	if minimap.cells[_around(1, 0)] != _expected(kinds, {"sq_1_0": {}}, Vector2i(1, 0)):
+		failures.append("at the corner the visited neighbour keeps its kind's colour")
+
+	# The real state: it recentres after a travel and after a load.
+	Game.state_changed.emit(Game.state)
+	var start := WorldMap.coords(str(Game.state["square"]))
+	if minimap.origin + Vector2i(3, 3) != start:
+		failures.append("the minimap is centred on the hero's square %s, got %s" % [start, minimap.origin + Vector2i(3, 3)])
+	Game.set_hero_cell(Vector2i(31, 0))
+	Game.apply_turn({}, [{"type": "travel", "to": "north"}])
+	var north := start + Vector2i(0, -1)
+	if WorldMap.coords(str(Game.state["square"])) != north:
+		return failures + ["travel north should apply"]
+	if minimap.origin + Vector2i(3, 3) != north:
+		failures.append("after a travel the minimap recentres on %s, got %s" % [north, minimap.origin + Vector2i(3, 3)])
+	var squares: Dictionary = Game.state["squares"]
+	if minimap.cells[_around(0, 0)] != _expected(kinds, squares, north) or minimap.cells[_around(0, 1)] != _expected(kinds, squares, start):
+		failures.append("after a travel the new square and the one left behind show their kind's colours")
+	main._on_save()
+	Game.set_hero_cell(Vector2i(31, 63))
+	Game.apply_turn({}, [{"type": "travel", "to": "south"}])
+	if minimap.origin + Vector2i(3, 3) != start:
+		failures.append("travelling back recentres on %s" % start)
+	main._on_load()
+	if minimap.origin + Vector2i(3, 3) != north:
+		failures.append("after a load the minimap recentres on the saved square %s, got %s" % [north, minimap.origin + Vector2i(3, 3)])
+	return failures
+
+
+func _world_map_checks(main) -> Array:
+	var failures: Array = []
+	var window = main.get_node_or_null("WindowLayer/WorldMapWindow")
+	if window == null or main.get("world_map_window") != window:
+		return ["the world map window should be WindowLayer/WorldMapWindow (main.world_map_window)"]
+	var viewport: Viewport = main.get_viewport()
+	var map: WorldMap = Game.world_map
+	if window.visible:
+		failures.append("the world map starts closed")
+
+	# A click on the minimap opens it, and doesn't reach the world.
+	var probe := ClickProbe.new()
+	var sub_viewport: SubViewport = main.get_node("Layout/Split/WorldPanel/WorldView/SubViewport")
+	sub_viewport.add_child(probe)
+	var spot: Vector2 = main.minimap.get_global_rect().get_center()
+	viewport.push_input(_click(spot, true), true)
+	viewport.push_input(_click(spot, false), true)
+	var clicks := probe.clicks
+	sub_viewport.remove_child(probe)
+	probe.free()
+	if not window.visible:
+		return failures + ["a click on the minimap opens the world map"]
+	layout(window)
+	if clicks != 0:
+		failures.append("the click on the minimap doesn't reach the world")
+	var title: Label = window.get_node(WINDOW + "Header/Title")
+	if title.text != Content.t("ui.world_map") or window.get_node(WINDOW + "Header/CloseButton").text != Content.t("ui.close"):
+		failures.append("the world map window shows '%s' and '%s'" % [Content.t("ui.world_map"), Content.t("ui.close")])
+
+	# The whole grid, in the minimap's colours, with the hero marked.
+	var view = window.get_node_or_null(WINDOW + "Body/Map")
+	if view == null:
+		return failures + ["the world map window needs Body/Map"]
+	if view.columns != map.width or view.rows != map.height or view.cells.size() != map.width * map.height:
+		failures.append("the world map shows the whole %d x %d grid, got %d x %d" % [map.width, map.height, view.columns, view.rows])
+	else:
+		var kinds := _kind_colours()
+		var squares: Dictionary = Game.state["squares"]
+		var wrong := 0
+		for y in map.height:
+			for x in map.width:
+				if view.cells[y * map.width + x] != _expected(kinds, squares, Vector2i(x, y)):
+					wrong += 1
+		if wrong != 0:
+			failures.append("world map: %d squares have the wrong colour" % wrong)
+		var hero := WorldMap.coords(str(Game.state["square"]))
+		if view.frame_index != hero.y * map.width + hero.x:
+			failures.append("the world map marks the hero's square")
+	if (window.painted != null) != ResourceLoader.exists(WorldMapWindow.PAINTED_PATH) or view.painted != window.painted:
+		failures.append("without maps/world-painted.png the world map uses the flat colours")
+	if WorldMapWindow.load_painted("res://content/maps/world.png") == null:
+		failures.append("an imported image can be the painted map")
+
+	# Read-only: a click on the map changes nothing and keeps it open.
+	var square_before := str(Game.state["square"])
+	var cell_before: Variant = Game.state["hero_cell"].duplicate()
+	var map_spot: Vector2 = view.get_global_rect().get_center()
+	viewport.push_input(_click(map_spot, true), true)
+	viewport.push_input(_click(map_spot, false), true)
+	if str(Game.state["square"]) != square_before or Game.state["hero_cell"] != cell_before or main._busy or not window.visible:
+		failures.append("a click on the world map never travels (and keeps it open)")
+
+	# M, Esc, the close button and a click outside close it; M opens it.
+	viewport.gui_release_focus()
+	viewport.push_input(_typed("m"), true)
+	if window.visible:
+		failures.append("M closes the world map")
+	viewport.push_input(_typed("m"), true)
+	if not window.visible:
+		failures.append("M opens the world map")
+	viewport.push_input(_key(KEY_ESCAPE, 0), true)
+	if window.visible:
+		failures.append("Esc closes the world map")
+	viewport.push_input(_typed("m"), true)
+	window.get_node(WINDOW + "Header/CloseButton").pressed.emit()
+	if window.visible:
+		failures.append("the close button closes the world map")
+	viewport.push_input(_typed("m"), true)
+	viewport.push_input(_click(Vector2(4, main.size.y - 4), true), true)
+	viewport.push_input(_click(Vector2(4, main.size.y - 4), false), true)
+	if window.visible:
+		failures.append("a click outside closes the world map")
 	return failures
 
 

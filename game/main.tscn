@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://world/world.tscn" id="2"]
@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" path="res://ui/bottom_bar.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://ui/menu.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://ui/backpack_window.tscn" id="8"]
+[ext_resource type="Script" path="res://ui/minimap.gd" id="9"]
+[ext_resource type="PackedScene" path="res://ui/world_map_window.tscn" id="10"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -71,6 +73,18 @@ render_target_update_mode = 4
 
 [node name="World" parent="Layout/Split/WorldPanel/WorldView/SubViewport" instance=ExtResource("2")]
 
+[node name="Minimap" type="Control" parent="Layout/Split/WorldPanel"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -112.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 112.0
+grow_horizontal = 0
+script = ExtResource("9")
+
 [node name="DiceZone" type="Control" parent="Layout/Split/WorldPanel"]
 layout_mode = 1
 anchors_preset = 8
@@ -99,6 +113,8 @@ layout_mode = 2
 [node name="Menu" parent="WindowLayer" instance=ExtResource("7")]
 
 [node name="BackpackWindow" parent="WindowLayer" instance=ExtResource("8")]
+
+[node name="WorldMapWindow" parent="WindowLayer" instance=ExtResource("10")]
 
 [node name="DialogLayer" type="CanvasLayer" parent="."]
 layer = 2

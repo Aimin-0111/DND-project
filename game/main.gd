@@ -1,8 +1,9 @@
 extends Control
 ## Main shell, layout v2 (SPEC-main-screen "Layout v2 (Beta-0.4)"): the top bar
 ## (Menu, place · clock · weather, Backpack), the story on the left (40%) and
-## the world on the right (60%, stacked below 900 px), the bottom bar, and the
-## windows over them (the menu, the backpack). It runs the copy-paste turn.
+## the world on the right (60%, stacked below 900 px) with the minimap, the
+## bottom bar, and the windows over them (the menu, the backpack, the world
+## map). It runs the copy-paste turn.
 ## The world stays in a SubViewport so its camera is isolated. A walk that ends
 ## on an exit of the square sends the automatic travel turn ("I head north
 ## (forest).", SPEC-main-screen.md); the DM decides the travel.
@@ -11,11 +12,13 @@ const STORY_RATIO := 0.4
 const STACK_BELOW := 900
 ## Shortcut keys (SPEC-main-screen, "Keys"); they wait while a text field has focus.
 const KEY_BACKPACK := KEY_B
+const KEY_WORLD_MAP := KEY_M
 
 @onready var split: HSplitContainer = $Layout/Split
 @onready var stack: VSplitContainer = $Layout/Stack
 @onready var world_panel: Control = $Layout/Split/WorldPanel
 @onready var world_view: SubViewportContainer = $Layout/Split/WorldPanel/WorldView
+@onready var minimap: Minimap = $Layout/Split/WorldPanel/Minimap
 @onready var dice_zone: Control = $Layout/Split/WorldPanel/DiceZone
 @onready var story_panel: PanelContainer = $Layout/Split/StoryPanel
 @onready var story_log: RichTextLabel = $Layout/Split/StoryPanel/VBox/StoryLog
@@ -30,6 +33,7 @@ const KEY_BACKPACK := KEY_B
 @onready var bottom_bar = $Layout/BottomBar
 @onready var menu = $WindowLayer/Menu
 @onready var backpack_window: GameWindow = $WindowLayer/BackpackWindow
+@onready var world_map_window: WorldMapWindow = $WindowLayer/WorldMapWindow
 
 var _busy := false
 var _stacked := false
@@ -56,6 +60,7 @@ func _ready() -> void:
 	world.walk_ended.connect(_on_walk_ended)
 	top_bar.menu_pressed.connect(_toggle_menu)
 	top_bar.backpack_pressed.connect(_toggle_window.bind(backpack_window))
+	minimap.pressed.connect(_open_window.bind(world_map_window))
 	menu.save_requested.connect(_on_save)
 	menu.load_requested.connect(_on_load)
 	menu.language_chosen.connect(_on_language_chosen)
@@ -295,7 +300,7 @@ func _toggle_menu() -> void:
 
 ## The menu and the windows over the screen: one is open at a time.
 func _windows() -> Array:
-	return [menu, backpack_window]
+	return [menu, backpack_window, world_map_window]
 
 
 func _close_windows() -> void:
@@ -306,23 +311,33 @@ func _close_windows() -> void:
 func _toggle_window(window: GameWindow) -> void:
 	if window.visible:
 		window.close()
-		return
+	else:
+		_open_window(window)
+
+
+func _open_window(window: GameWindow) -> void:
 	_close_windows()
 	window.open()
 
 
-## B opens or closes the backpack. Typing "b" in the action box only types it:
-## a focused text field takes the key first, and the keys also wait while a
-## dialog is open. Esc is handled by the open window itself.
+## B opens or closes the backpack, M the world map. Typing "b" or "m" in the
+## action box only types it: a focused text field takes the key first, and
+## the keys also wait while a dialog is open. Esc is handled by the open
+## window itself.
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo or key.ctrl_pressed or key.alt_pressed or key.meta_pressed:
 		return
 	if _shortcuts_blocked():
 		return
-	if key.keycode == KEY_BACKPACK:
-		_toggle_window(backpack_window)
-		get_viewport().set_input_as_handled()
+	match key.keycode:
+		KEY_BACKPACK:
+			_toggle_window(backpack_window)
+		KEY_WORLD_MAP:
+			_toggle_window(world_map_window)
+		_:
+			return
+	get_viewport().set_input_as_handled()
 
 
 ## True while a text field has focus or a dialog is open (the paste window,
