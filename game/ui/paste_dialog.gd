@@ -71,8 +71,10 @@ func _ready() -> void:
 
 
 func open(prompt: String) -> void:
-	_prompt = prompt
-	prompt_text.text = prompt
+	# Content files copied on Windows have CRLF line ends; the prompt box drops
+	# the CRs, so copy the same LF text the player sees.
+	_prompt = prompt.replace("\r\n", "\n")
+	prompt_text.text = _prompt
 	reply_text.text = ""
 	_js_callbacks.clear()
 	_show_notice("")
