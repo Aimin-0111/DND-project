@@ -1,6 +1,6 @@
 # Spec: Brasswake Reach
 
-*Status: approved October 19, 2026; updated the same day with the team's questionnaire answers and "no itch.io upload during M1"; updated November 2, 2026 with the lead's map-squares decisions (Beta-0.3: a grid of squares, travel decided by the DM; living document: update it before the code when a decision changes). Background: [docs/PLAN.md](docs/PLAN.md), team questions: [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md), static examples: [examples/](examples/README.md).*
+*Status: approved October 19, 2026; updated the same day with the team's questionnaire answers and "no itch.io upload during M1"; updated November 2, 2026 with the lead's map-squares decisions (Beta-0.3: a grid of squares, travel decided by the DM); updated November 4, 2026 with the Beta-0.4 decisions (layout v2 with a menu, a backpack, a minimap and bars; Steam, XP and equipment; art direction; building later), whose details Claude chose on the lead's behalf ([tasks/beta-0.4.md](tasks/beta-0.4.md)) (living document: update it before the code when a decision changes). Background: [docs/PLAN.md](docs/PLAN.md), team questions: [docs/QUESTIONS-EQUIPE.md](docs/QUESTIONS-EQUIPE.md), static examples: [examples/](examples/README.md).*
 
 This file holds the **capability map** and everything the modules share. Each module has its own spec next to this file (`SPEC-<module id>.md`). The map, not the file names, is the index of what exists.
 
@@ -14,7 +14,7 @@ A solo RPG with an AI Dungeon Master. About **40% of the screen is the story** (
 - **Team choices (questionnaire, October 19, 2026):**
   - English and French, chosen at the first launch;
   - magic fantasy with a light steampunk touch;
-  - pixel art, top-down view, characters walk in 8 directions;
+  - pixel art, top-down view, characters walk in 8 directions (top-down 3/4 like Stardew Valley; isometric was turned down on November 4, 2026, see [Art direction](#art-direction-beta-04));
   - free placeholder art until the artist's files arrive;
   - turn-based fights with dice (D&D style), animated (M3);
   - important places made by hand, the rest generated once and stored: since Beta-0.3 the world is a grid of big square maps, and the DM decides travel between them ([SPEC-map.md](SPEC-map.md)).
@@ -43,20 +43,21 @@ The module specs describe **behaviour, data formats and contracts** (state JSON,
 
 | Module id | What it does | Depends on | When | Spec |
 |---|---|---|---|---|
-| `core` | The single game state, rule checks, seeded dice, applying changes within limits, travel between squares (state v2). Later: Rewind snapshots, versioned saves + migrations, JSON export/import | map (travel only) | M1, Beta-0.3, M2 | [SPEC-core.md](SPEC-core.md) |
-| `content` | Loads and checks the team's files (CSV, Markdown, art, map images), looks things up by id, lists the ids the AI may use. EN + FR text | — | M1, Beta-0.3 | [SPEC-content.md](SPEC-content.md) |
+| `core` | The single game state, rule checks, seeded dice, applying changes within limits, travel between squares (state v2), Steam, XP and levels, equipment and items the player uses (state v3). Later: Rewind snapshots, versioned saves + migrations, JSON export/import | map (travel only) | M1, Beta-0.3, Beta-0.4, M2 | [SPEC-core.md](SPEC-core.md) |
+| `content` | Loads and checks the team's files (CSV, Markdown, art, map images), looks things up by id, lists the ids the AI may use. EN + FR text. Beta-0.4: item columns and the level table | — | M1, Beta-0.3, Beta-0.4 | [SPEC-content.md](SPEC-content.md) |
 | `narration` | Story text: typewriter, animated keywords (AI tags + word list), old entries stop animating, reduce motion | content | M1 | [SPEC-narration.md](SPEC-narration.md) |
-| `dm` | One AI turn: prompt (with the MAP part), connection (copy-paste, own key; proxy client later), reply checks (with `travel`), story summary. **Owns the command list and the reply format** | core, content, map | M1, Beta-0.3 | [SPEC-dm.md](SPEC-dm.md) |
+| `dm` | One AI turn: prompt (with the MAP part), connection (copy-paste, own key; proxy client later), reply checks (with `travel`; Beta-0.4: `suggestions`, `xp_gain`, `steam_delta`, the marker rules), story summary. **Owns the command list and the reply format** | core, content, map | M1, Beta-0.3, Beta-0.4 | [SPEC-dm.md](SPEC-dm.md) |
 | `map` | The world grid: reads the world map and the hand-made squares, generates the other squares once (stored in the save), answers neighbours, exits and arrival tiles. Pure logic, no nodes | content (formats) | Beta-0.3 | [SPEC-map.md](SPEC-map.md) |
 | `world` | Animated scene: the current square drawn from its tiles, walkable cells, click-to-move hero (8 directions), camera, named places, creatures, playing checked commands, the fade between squares | content, map, dm (command list only) | M1, Beta-0.3, M3 | [SPEC-world.md](SPEC-world.md) |
-| `main-screen` | 40/60 layout, HUD, action box, the turn loop (and the automatic travel turn at an exit), settings. Later: Sheet/Pack/Quests/Codex tabs, autosave | core, content, narration, dm, map, world | M1, Beta-0.3, M2 | [SPEC-main-screen.md](SPEC-main-screen.md) |
+| `main-screen` | 40/60 layout, HUD, action box, the turn loop (and the automatic travel turn at an exit), settings. Beta-0.4, layout v2: story on the left, world on the right; a top bar with the Menu (save, load, language, Codex, AI settings) and the backpack; a bottom bar with the HP, Steam and XP bars and the hotbar; the minimap and world map; suggestion chips and change pop-ups. Later: Journal | core, content, narration, dm, map, world | M1, Beta-0.3, Beta-0.4, M2 | [SPEC-main-screen.md](SPEC-main-screen.md) |
 | `release` | Web build run locally, with a checklist and a build log. Later: private itch.io page, desktop builds, public page | main-screen | M1, M5 | [SPEC-release.md](SPEC-release.md) |
 | `proxy` | Server holding our API key, implementing the `dm` turn/summary contract | dm (contract) | M2 | *not yet* |
 | `combat` | Turn-based fights with dice (D&D style), animated and synced with the text | core, world, narration, dm | M3 | *not yet* |
 | `balance-tools` | Python content checker + fight simulator | content, core (formats) | M4 | *not yet* |
 | `audio` | Music and sound effects (optional) | main-screen | M5 | *not yet* |
+| `build` | Sandbox (the lead's wish, November 4, 2026): gather wood and stone, craft from a recipe table, place objects on the tiles of a square. Placed objects are stored in the save and told to the DM in the MAP part ([below](#later-building-and-crafting)) | core, content, map, world, main-screen | After M3 | *not yet* |
 
-**Build order.** M1: `core` + `content` → `narration` + `dm` → `world` → `main-screen` → `release`. Beta-0.3 (lead, November 2, 2026): `map` → travel in `core` and `dm` → `world` and `main-screen`. Then `proxy` (M2), `combat` (M3), `balance-tools` (M4), `audio` (M5).
+**Build order.** M1: `core` + `content` → `narration` + `dm` → `world` → `main-screen` → `release`. Beta-0.3 (lead, November 2, 2026): `map` → travel in `core` and `dm` → `world` and `main-screen`. Beta-0.4 (November 4, 2026; cloud sessions run one at a time, see [tasks/beta-0.4.md](tasks/beta-0.4.md)): layout v2 and the minimap in `main-screen` → state v3 in `core` + `content` + `dm` → the backpack window, bars and hotbar in `main-screen` → the DM extras (suggestions, marker rules, change pop-ups). Then `proxy` (M2), `combat` (M3), `balance-tools` (M4), `audio` (M5), `build` (after M3).
 
 **Contracts live with the provider.** The state shape is in `SPEC-core.md`, the content file formats in `SPEC-content.md`, the command list and AI reply format in `SPEC-dm.md`, the square grid, exits, arrival and generation rules in `SPEC-map.md`.
 
@@ -65,6 +66,39 @@ The module specs describe **behaviour, data formats and contracts** (state JSON,
 - `narration` uses the keyword list of the current language.
 - `dm` tells the AI which language to narrate in.
 - `main-screen` takes every UI string from one translation table and has the language switch.
+
+## Art direction (Beta-0.4)
+
+Decided on November 4, 2026. The lead showed two Stardew-like reference pictures; Claude chose the rest on the lead's behalf.
+
+- **View: top-down 3/4, not isometric.** The ground is seen from above, and trees, houses and characters slightly from the front, as in Stardew Valley. Isometric was turned down:
+  - it costs the one artist about twice the drawing;
+  - it makes the tile under the mouse hard to read, which building needs;
+  - our `world.png` (1 pixel = 1 square) and the minimap fit a square grid as they are.
+- **The scene carries the detailed look**, built from tiles:
+  - grass and flower variants;
+  - paths and riverbanks that join up on their own (Godot terrain tiles);
+  - bridges and cliffs;
+  - big trees several tiles tall that the hero walks behind (y-sorting).
+
+  This is later work for `world` and the artist, not Beta-0.4.
+- **The minimap stays flat**, one colour per square (from `kinds.csv`). At about 80 px a painted style would turn to mush.
+- **The big world map** may use one painted picture by the artist (`maps/world-painted.png`), shown under the fog ([SPEC-main-screen.md](SPEC-main-screen.md#minimap-and-world-map)).
+- **Reference pictures:**
+  - AI-made pictures like the lead's references are a style guide for the artist, not game art: one flat picture can't be walked through, and its trees can't hide the hero;
+  - a free pixel-art pack in a similar style may stand in until the artist's tiles arrive, but only after the lead checks its licence (Ask first: new assets).
+- **Tile size stays 32 × 32 px** until the artist answers Q10. A 16 px style can be drawn at double size.
+
+## Later: building and crafting
+
+The lead's wish (November 4, 2026). The lead's sentence was cut off after "build and…", so the rest is an open question. This is **not** in Beta-0.4; it is written down now so the state and the map leave room for it.
+- **Gather:** chop trees and break rocks next to the hero to get wood and stone into the pack.
+- **Craft:** from a recipe table the writer and the lead can edit (`content/data/recipes.csv`: what it makes, what it costs).
+- **Place:** objects such as a campfire, a tent, a fence, a chest or a workbench go on walkable tiles of the current square.
+  - They are stored per square in the save (`squares[<id>].placed`), with a state migration.
+  - They are listed for the DM in the MAP part, so the story can use them (wolves drawn to a fire…).
+- **Who decides:** the game owns building, as it owns dice. Building costs game time, not a DM turn, and there is no building during a fight.
+- **Open:** what came after "build and…" (farming? a home base?).
 
 ## Commands (provisional: Godot)
 

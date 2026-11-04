@@ -21,7 +21,8 @@ All files live under `game/content/`. **This spec owns these formats**; changing
 
 | File | Columns | Notes |
 |---|---|---|
-| `items.csv` | `id, name_en, name_fr, type, price, damage, ac_bonus, heal, weight, icon, description_en, description_fr` | `type` ∈ weapon, armor, potion, tool, quest. `damage`/`heal` are dice notation or empty |
+| `items.csv` | Beta-0.4: `id, type, price, slot, ac_bonus, attack_bonus, damage, heal, steam` (M1 to Beta-0.3 shipped only `id, type, price`, and the names went to `strings.csv`; the planned name, weight and icon columns were never used) | `type` ∈ weapon, armor, potion, tool, quest. `slot` ∈ head, body, weapon, off_hand, feet, trinket, or empty. `ac_bonus` and `attack_bonus` are whole numbers or empty. `damage`, `heal` and `steam` are dice notation (`2d4+2`), a whole number, or empty. An item is **usable** when it has `heal` or `steam`. Names and descriptions are in `strings.csv` (`item.<id>.name`, `item.<id>.desc`, both languages); icons are looked up as today |
+| `levels.csv` | `level, xp, hp_max, steam_max` (Beta-0.4) | Levels 1, 2, 3… with no gaps; `xp` starts at 0 and goes up. First guesses: 1 / 0 / 12 / 6, 2 / 300 / 20 / 9, 3 / 900 / 28 / 12, 4 / 2700 / 36 / 15, 5 / 6500 / 44 / 18 |
 | `monsters.csv` | `id, name_en, name_fr, level, hp, ac, attack_bonus, damage, xp, habitat, sprite` | `habitat` is a `|` list |
 | `quests.csv` | `quest, stage, title_en, title_fr` | One row per stage, stages 0, 1, 2… with no gaps |
 | `keywords.csv` | `effect, lang, words` | `effect` ∈ burn, freeze, shock, poison, whisper, holy. `lang` ∈ en, fr. `words` is a `|` list |
@@ -29,6 +30,21 @@ All files live under `game/content/`. **This spec owns these formats**; changing
 | `locations.csv` | `id, square, x, y` | Beta-0.2 file (`id`); Beta-0.3 adds where each place's marker is: the hand-made square's id (`sq_<x>_<y>`) and the tile inside it (0–63). The writer's place pages don't change |
 
 The example files in `examples/content/data/` move here, with `name`/`description` split into `_en`/`_fr` columns.
+
+**Beta-0.4 checks** (`content_check.py` and the Godot loader):
+- **Errors:**
+  - a `slot` outside the list;
+  - a bad whole number or dice notation;
+  - an item with a `slot` whose `type` isn't weapon or armor;
+  - a missing `item.<id>.name`;
+  - `levels.csv` with a gap, or with an `xp` that doesn't go up.
+- **Warnings:** a missing `item.<id>.desc`, or a missing icon (the placeholder shows).
+
+Beta-0.4 adds two items for the first backpack:
+- `leather_jerkin`: armor, body slot, `ac_bonus` 1, price 10;
+- `brass_tonic`: potion, `steam` `1d4+1`, price 20.
+
+Their names are in `strings.csv`, for the writer to review. Their icons are left to the artist.
 
 ### Writing (`writing/`)
 

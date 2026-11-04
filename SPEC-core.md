@@ -1,6 +1,6 @@
 # Spec: `core` (state, rules, dice)
 
-*Module of [SPEC.md](SPEC.md). Depends on: `map` (only to apply travel: the world grid is passed in as data). Used by: `dm`, `main-screen` (and later `combat`, `balance-tools`). When: M1 (state, dice, changes), Beta-0.3 (state v2: squares and travel), M2 (saves, Rewind).*
+*Module of [SPEC.md](SPEC.md). Depends on: `map` (only to apply travel: the world grid is passed in as data). Used by: `dm`, `main-screen` (and later `combat`, `balance-tools`). When: M1 (state, dice, changes), Beta-0.3 (state v2: squares and travel), Beta-0.4 (state v3: Steam, XP and levels, equipment, items you use), M2 (saves, Rewind).*
 
 ## Objective
 
@@ -69,6 +69,52 @@ The real game started at **version 1** (M1, Beta-0.2). **Version 2** (Beta-0.3, 
 
 **Never in the prompt:** `squares` (stored tiles) and `hero_cell` stay out of the AI's state view; the AI gets the MAP part instead ([SPEC-dm.md](SPEC-dm.md#the-prompt)).
 
+## State version 3 (Beta-0.4)
+
+Decided on November 4, 2026, for the backpack and the bars of [SPEC-main-screen.md](SPEC-main-screen.md#layout-v2-beta-04). The details were chosen by Claude on the lead's behalf, and the lead can change any number. Version 3 adds Steam, equipment, the hotbar and events, and gives `level` and `xp` their rules. Version 2 and version 1 saves still load (migrations below).
+
+```json
+{
+  "version": 3,
+  "hero": {
+    "name": "Kael", "class": "ranger", "level": 1, "xp": 0,
+    "hp": 12, "hp_max": 12, "steam": 6, "steam_max": 6, "ac": 14,
+    "abilities": {"str": 12, "dex": 16, "con": 13, "int": 10, "wis": 14, "cha": 8},
+    "skills": {"Stealth": 5, "Survival": 4, "Perception": 4}
+  },
+  "equipment": {"head": "", "body": "", "weapon": "rusty_sword", "off_hand": "", "feet": "", "trinket": ""},
+  "hotbar": ["healing_draught", "", "", ""],
+  "pack": [{"id": "healing_draught", "qty": 2}, {"id": "brass_tonic", "qty": 1}, {"id": "leather_jerkin", "qty": 1}],
+  "events": []
+}
+```
+
+(Only the fields that are new or changed are shown. The rest is as in version 2.)
+
+| Field | Meaning | Rules |
+|---|---|---|
+| `hero.steam`, `hero.steam_max` | Steam: the hero's magic power (light steampunk magic) | `0 <= steam <= steam_max`. `steam_max` comes from `levels.csv` |
+| `hero.level`, `hero.xp` | Level and experience (in the state since v1, with rules from v3) | `level` is the highest row of `levels.csv` whose `xp` is at or below the hero's `xp`. It never goes down |
+| `hero.ac` | **Base** armour class, without equipment (meaning from v3) | The shown armour class is `ac` plus the `ac_bonus` of each equipped item |
+| `equipment` | Slot → item id, or `""` | Slots: `head`, `body`, `weapon`, `off_hand`, `feet`, `trinket`. An item goes only in the slot named by its `slot` column. Equipped items are **not** in `pack` |
+| `hotbar` | 4 item ids or `""` (keys 1–4) | Only usable items (they heal or give Steam). A binding whose item is no longer in `pack` is cleared |
+| `events` | Short English lines about what the player did between two replies ("used healing_draught: +6 HP") | At most 10; the oldest is dropped. Sent in prompt part 7, then cleared by `apply_commands`, like `last_roll` |
+
+`core` never reads content files: the item table (`items.csv`) and the level table (`levels.csv`) are passed in as data, like the world grid.
+
+**New game (v3):**
+- the rusty sword is equipped;
+- the pack holds Healing Draught ×2, Brass Tonic ×1 and Leather Jerkin ×1, so the first player can try Use and Equip;
+- the Healing Draught is on hotbar slot 1;
+- Steam starts at 6/6.
+
+**Version 2 → 3 migration:**
+- adds `steam` and `steam_max` from `levels.csv` for the hero's level (6/6 at level 1 if the table can't be read);
+- adds every `equipment` slot as `""`, `hotbar` as `["", "", "", ""]`, and `events` as `[]`;
+- leaves `ac` unchanged.
+
+Nothing is equipped by the migration: the player equips from the backpack.
+
 ## Interface
 
 Names are provisional (GDScript style); the behaviour is the contract.
@@ -86,8 +132,16 @@ Names are provisional (GDScript style); the behaviour is the contract.
 | `skills() -> list` | The skill list and each skill's ability (Athletics→str, Acrobatics→dex, Stealth→dex, Perception→wis, Investigation→int, Persuasion→cha, Insight→wis, Survival→wis) | M1 |
 | `clock_text(time_minutes, lang) -> text` | "Day 1, 08:00" / "Jour 1, 08:00" | M1 |
 | Dice: `roll(sides, count, bonus)`, `roll_notation("2d6+3")`, `check(modifier, dc, advantage)` | Seeded; `check` always rolls two d20s so the sequence doesn't depend on advantage | M1 |
+| `apply_changes`, Beta-0.4 keys | `xp_gain` (0–300, clamped), then the level-up check below; `steam_delta` (−30 … +30 like `hp_delta`, then `steam` is clamped to 0 … `steam_max`) | Beta-0.4 |
+| Level-up (inside `apply_changes` and after any `xp` change) | While `xp` reaches the next row of `levels.csv`: `level` +1, `hp_max` and `steam_max` take that row's values, and `hp` and `steam` rise by the same amounts as their maximums. Several levels at once work; the last row is the highest level. The result says how many levels were gained (for the "Level 2!" pop-up) | Beta-0.4 |
+| `use_item(state, item_id, items, dice) -> result` | Refused (nothing changes, an error comes back) if the item isn't in `pack`, isn't usable (no `heal` and no `steam`), or would restore nothing (HP and Steam already full for what it gives). Otherwise: `heal` is rolled with the dice (a number or dice notation; the dice sequence moves on) and added to `hp` up to `hp_max`; `steam` the same way for `steam`; `qty` −1 (the entry is removed at 0, and its hotbar binding cleared); an event is added. The result holds what was gained | Beta-0.4 |
+| `equip(state, item_id, items)` | The item must be in `pack` and have a `slot`. One is moved from `pack` to `equipment[slot]`; the item that was there goes back to `pack` | Beta-0.4 |
+| `unequip(state, slot)` | Moves the slot's item back to `pack` (stacked, at most 99) | Beta-0.4 |
+| `set_hotbar(state, index, item_id)` | `index` 0–3. A usable item in `pack`, or `""` to clear. An item already bound to another slot moves to this one | Beta-0.4 |
+| `armor_class(state, items)` | `hero.ac` + each equipped item's `ac_bonus` | Beta-0.4 |
+| `attack_bonus(state, items)` | Proficiency (2 + floor((level − 1) / 4)) + the higher of the str and dex modifiers + the equipped weapon's `attack_bonus`. Provisional until `combat` (M3) | Beta-0.4 |
 | `snapshot(state) -> copy` | Deep copy taken before each turn | M2 |
-| `save(state, slot)`, `load(slot)`, `export_text(state)`, `import_text(text)` | JSON saves with migrations. **v1 → v2:** adds `square: ""`, `hero_cell: []`, `squares: {}` and `square: ""` on each creature; `settle` then fills them from the v1 `location` and the creatures' places | M2 (v1 → v2: Beta-0.3) |
+| `save(state, slot)`, `load(slot)`, `export_text(state)`, `import_text(text)` | JSON saves with migrations. **v1 → v2:** adds `square: ""`, `hero_cell: []`, `squares: {}` and `square: ""` on each creature; `settle` then fills them from the v1 `location` and the creatures' places. **v2 → v3:** see [State version 3](#state-version-3-beta-04) | M2 (v1 → v2: Beta-0.3; v2 → v3: Beta-0.4) |
 
 ## Acceptance criteria
 
@@ -113,6 +167,33 @@ Names are provisional (GDScript style); the behaviour is the contract.
 - [ ] A stored generated square survives save and load unchanged; tile ids reordered in `tiles.csv` don't change it; broken stored tiles are generated again.
 - [ ] `set_hero_cell` on a tile inside a place's area sets that place; elsewhere it sets `""`.
 
+**Beta-0.4**
+- [ ] `new_game` gives version 3:
+  - Steam 6/6;
+  - the rusty sword equipped;
+  - Healing Draught ×2, Brass Tonic ×1 and Leather Jerkin ×1 in the pack;
+  - the Healing Draught on hotbar slot 1.
+- [ ] A version 2 save (new fixture `tests/fixtures/saves/v2.json`) loads as version 3 with the fields of the migration. A version 1 save still loads (v1 → v2 → v3).
+- [ ] **XP:**
+  - `xp_gain` 350 is clamped to 300 and noted;
+  - crossing 300 XP gives level 2: `hp_max` 20, `hp` +8, `steam_max` 9, `steam` +3;
+  - crossing two levels at once works;
+  - at the last level nothing breaks;
+  - the level never goes down.
+- [ ] **Steam:** `steam_delta` is clamped to −30 … +30, and `steam` to 0 … `steam_max`.
+- [ ] **`use_item("healing_draught")`:**
+  - HP rises by the 2d4+2 roll (the same seed gives the same roll), never above `hp_max`;
+  - `qty` drops by 1;
+  - the last one removes the entry and clears its hotbar slot;
+  - an event is added.
+- [ ] **Refused uses:** an item not in the pack, an item that isn't usable, or a use at full HP and Steam changes nothing and returns an error.
+- [ ] **Equipment:**
+  - `equip` and `unequip` move items between the pack and the slots, and the old item goes back to the pack;
+  - an item with no slot is refused;
+  - `armor_class` and `attack_bonus` follow: base 14 + Leather Jerkin 1 = 15.
+- [ ] **Hotbar:** `set_hotbar` refuses an item that isn't usable or isn't in the pack, and moves an item already bound elsewhere.
+- [ ] **Events:** at most 10 are kept, and `apply_commands` clears them.
+
 **M2**
 - [ ] Save then load gives an identical state, including `rng_state` (the next roll is the same as without saving).
 - [ ] `import_text` refuses non-JSON, a missing `version`, and a version newer than the game; it never loads engine resource files.
@@ -133,5 +214,6 @@ Names are provisional (GDScript style); the behaviour is the contract.
 ## Open questions
 
 - Q-4 (fixed hero or character creation) and Q-5 (what happens at 0 HP), see [SPEC.md](SPEC.md#open-questions).
-- XP and level-up rules: M2 or M3?
-- Using items (drinking a healing draught): a player button (M2) or only through the AI's `state` changes?
+- ~~XP and level-up rules: M2 or M3?~~ Beta-0.4: `levels.csv` and `xp_gain` (above).
+- ~~Using items: a player button or only through the AI?~~ Beta-0.4: the player uses items from the backpack or the hotbar. The DM learns about it from `events`.
+- For the lead: the numbers in `levels.csv` and `items.csv`, and the XP the DM may give per turn (300 now), are first guesses to tune.

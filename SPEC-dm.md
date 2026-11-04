@@ -16,6 +16,7 @@ TurnResult = {
   narration: text,     # untrusted text, still to go through narration.tag()
   commands: [...],     # checked commands, in order
   changes: {...},      # checked state changes
+  suggestions: [...],  # Beta-0.4: up to 3 checked plain texts for the chips (may be empty)
   errors: [...],       # what was dropped or clamped, for the debug log
   status: text         # message for the player when ok is false
 }
@@ -30,10 +31,10 @@ Ordered from **most stable to least stable**, so prompt caching can reuse the be
 | 1 | DM rules + one language line ("Narrate in French." / "Narrate in English.") | `content.dm_rules()` |
 | 2 | Codex | `content.codex_text()` |
 | 3 | Story so far | `state.story_summary` |
-| 4 | State view: hero, gold, pack, quests, location, weather, creatures present **in the current square**, clock text | `core` |
+| 4 | State view: hero, gold, pack, quests, location, weather, creatures present **in the current square**, clock text. Beta-0.4: the hero also shows Steam, level, XP (and the XP of the next level), the armour class and attack bonus computed by `core`, and the equipped items | `core` |
 | 5 | **MAP** (Beta-0.3): the current square (id, kind, made by hand or generated, its places), the four neighbours (id, kind, whether the hero can enter, whether visited, their places) and the visited squares (id, kind, places) | `core`'s map view, from `state` + `map` |
 | 6 | Allowed ids: locations, creatures, items, quests, npcs + skills + `travel` (the valid `to` values this turn) | `content.allowed_ids()` + `core.skills()` + the map view |
-| 7 | Last roll result, if any | `state.last_roll` |
+| 7 | Last roll result, if any. Beta-0.4: then "Since your last reply:" and the `events` (items the player used), if any | `state.last_roll`, `state.events` |
 | 8 | Player action | The action box, or the automatic travel action ([SPEC-main-screen.md](SPEC-main-screen.md#exits-the-automatic-travel-turn)) |
 
 - Ids and JSON keys stay in English whatever the language.
@@ -41,11 +42,33 @@ Ordered from **most stable to least stable**, so prompt caching can reuse the be
 - In Godot the MAP view reaches `PromptBuilder.build` inside the allowed ids (`allowed["map"]`); the builder takes it out of ALLOWED IDS and prints it as its own part. The reply checks read the same view, so the prompt and the checks can't disagree.
 - **The DM rules include the two fixes from the Haiku test** (decided October 19, 2026; see `examples/ai-tests/RESULTS.md`): a place, person, creature or item that isn't in the Codex, the allowed ids or the pack doesn't exist in this world (S1); when the story moves the hero to a listed place, the reply includes a `move_to` for it (S8). Code can't check the first one, so S1 and S8 are rerun once the real game can play a turn.
 - **Beta-0.3 rules:** how to use `travel` (a direction from MAP the hero can enter, or a visited square id; at most one; the other commands then apply to the new square); describe a generated square by its kind and never invent named places there. Changing `dm-rules.md` invalidates the prompt cache: rerun S1 and S8, plus one exit turn.
+- **Beta-0.4 rules** (new lines in `dm-rules.md`; tell the writer):
+  - give `xp_gain` when the hero overcomes something: about 50 for a creature beaten or avoided cleverly, 100–300 for a quest stage;
+  - use `steam_delta` when the hero spends Steam on magic or gets it back (rest, brass tonic machines…);
+  - end with up to 3 short `suggestions` of what the hero could do next, in the player's language.
 - **M1 story so far:** the intro text + the last 3 narrations (each cut to 600 characters). **M2:** a rolling summary refreshed every 5 turns by a cheaper model, at most 200 words.
 
 ## Contract: the reply format
 
 Narration first, then a line with exactly `<<STATE>>`, then **one** JSON object (fences like ```` ```json ```` are tolerated). This format works in copy-paste mode too, so it stays the format for every connection.
+
+**The marker line (Beta-0.4).** These rules answer the two questions in [docs/m1-ai-tests.md](docs/m1-ai-tests.md); Claude decided them on the lead's behalf on November 4, 2026.
+- The marker is a line holding `<<STATE>>` with nothing else on it but spaces or tabs.
+- A marker inside a sentence is still not a marker.
+- **Several marker lines:**
+  - the **last** one is used, and this is noted;
+  - the narration is the text before it, with the earlier marker lines taken out.
+  - Why the last one: the AI's own block comes last in the format, and an earlier one usually quotes the player.
+
+**Top-level keys:**
+- `commands` and `state`, as below;
+- `suggestions` (Beta-0.4, optional): what the hero could do next, shown as chips ([SPEC-main-screen.md](SPEC-main-screen.md#suggested-actions)). It is a list of texts:
+  - at most 3 are kept;
+  - each is trimmed, its line breaks become spaces, tags like `[burn]` are removed, and it is cut to 60 characters;
+  - an entry that isn't text, or is empty, is dropped and noted;
+  - suggestions never change the state.
+
+Any other key is ignored and noted.
 
 ```
 The planks groan as you step onto the bridge...
@@ -79,6 +102,8 @@ A command with a missing field, a wrong type or an unknown value is dropped and 
 | `time_advance_minutes` | 0 … 1440 | Clamped, noted |
 | `add_items` | Up to 3 allowed item ids | Unknown ids dropped, noted |
 | `quest_updates` | `{id, stage, done}` with an allowed quest, whole `stage` ≥ 0, `done` true/false | Bad entries dropped, noted |
+| `xp_gain` | 0 … 300 (Beta-0.4) | Clamped, noted |
+| `steam_delta` | −30 … +30 (Beta-0.4) | Clamped, noted |
 
 Unknown keys are ignored and noted. `core` clamps again when applying (defence in depth).
 
@@ -142,6 +167,23 @@ One interface: `generate_turn(prompt) -> reply text` (empty = no reply), plus st
 - [ ] Without a map view (the M1 fixtures), the old checks apply unchanged.
 - [ ] **Prompt:** a MAP part between STATE and ALLOWED IDS, with the current square, its places, the four neighbours and the visited squares; ALLOWED IDS lists the `travel` targets; no stored tiles (`legend`, `rows`) and no `hero_cell` in the prompt.
 - [ ] `dm-rules.md` explains `travel` and says generated squares are described by their kind, with no invented named places.
+
+## Acceptance criteria (Beta-0.4)
+
+- [ ] `xp_gain` and `steam_delta` inside their ranges are kept; outside values are clamped and noted; a value that isn't a number is dropped and noted.
+- [ ] **`suggestions`:**
+  - up to 3 are kept, trimmed, as plain text of at most 60 characters;
+  - a 4th is dropped and noted, and so is an entry that isn't text or is empty;
+  - with no `suggestions` the result has an empty list;
+  - suggestions never touch the state.
+- [ ] **The marker:**
+  - `  <<STATE>>\t` (spaces and a tab around it) is the marker;
+  - with two marker lines the last one is used and this is noted, and the narration holds no marker line;
+  - a marker inside a sentence is still narration.
+- [ ] **The prompt:**
+  - the state view shows Steam, level, XP, the armour class, the attack bonus and the equipment;
+  - part 7 shows the events, and they are gone from the next prompt.
+- [ ] The 8 archived Haiku replies and the crafted bad replies give the same results as before, except the marker fixtures, whose expected results change on purpose (listed in the test).
 
 ## Tests
 
