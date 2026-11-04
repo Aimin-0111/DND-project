@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/paste_dialog.gd" id="1"]
+[ext_resource type="Script" path="res://ui/reply_box.gd" id="2"]
 
 [node name="PasteDialog" type="PanelContainer"]
 anchors_preset = 8
@@ -9,9 +10,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -420.0
-offset_top = -260.0
+offset_top = -280.0
 offset_right = 420.0
-offset_bottom = 260.0
+offset_bottom = 280.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
@@ -22,20 +23,47 @@ theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
-text = "Paste the AI's reply"
+text = "Paste reply"
+
+[node name="Help1" type="Label" parent="VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "1. Copy the prompt and paste it into a Claude chat."
+
+[node name="Help2" type="Label" parent="VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "2. Copy Claude's whole reply, paste it here, then press Continue."
 
 [node name="PromptText" type="TextEdit" parent="VBox"]
-custom_minimum_size = Vector2(0, 150)
+custom_minimum_size = Vector2(0, 130)
 layout_mode = 2
 editable = false
 
 [node name="ReplyText" type="TextEdit" parent="VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+script = ExtResource("2")
+
+[node name="Notice" type="Label" parent="VBox"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
 
 [node name="Buttons" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
-alignment = 2
+
+[node name="CopyButton" type="Button" parent="VBox/Buttons"]
+layout_mode = 2
+text = "Copy prompt"
+
+[node name="PasteButton" type="Button" parent="VBox/Buttons"]
+layout_mode = 2
+text = "Paste"
+
+[node name="Spacer" type="Control" parent="VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="CancelButton" type="Button" parent="VBox/Buttons"]
 layout_mode = 2

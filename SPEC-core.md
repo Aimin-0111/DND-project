@@ -141,7 +141,7 @@ Names are provisional (GDScript style); the behaviour is the contract.
 | `armor_class(state, items)` | `hero.ac` + each equipped item's `ac_bonus` | Beta-0.4 |
 | `attack_bonus(state, items)` | Proficiency (2 + floor((level − 1) / 4)) + the higher of the str and dex modifiers + the equipped weapon's `attack_bonus`. Provisional until `combat` (M3) | Beta-0.4 |
 | `snapshot(state) -> copy` | Deep copy taken before each turn | M2 |
-| `save(state, slot)`, `load(slot)`, `export_text(state)`, `import_text(text)` | JSON saves with migrations. **v1 → v2:** adds `square: ""`, `hero_cell: []`, `squares: {}` and `square: ""` on each creature; `settle` then fills them from the v1 `location` and the creatures' places. **v2 → v3:** see [State version 3](#state-version-3-beta-04) | M2 (v1 → v2: Beta-0.3; v2 → v3: Beta-0.4) |
+| `save(state, slot)`, `load(slot)`, `export_text(state)`, `import_text(text)` | JSON saves with migrations. Slots: `manual` (Save button) and `auto` (every turn). `slots_newest_first(slots)` lists the slots that have a file, the last written first (file time; on a tie the earlier slot in the list), for Load and Resume (Beta-0.3). The save folder can be pointed elsewhere for tests. **v1 → v2:** adds `square: ""`, `hero_cell: []`, `squares: {}` and `square: ""` on each creature; `settle` then fills them from the v1 `location` and the creatures' places. **v2 → v3:** see [State version 3](#state-version-3-beta-04) | M2 (v1 → v2: Beta-0.3; v2 → v3: Beta-0.4) |
 
 ## Acceptance criteria
 

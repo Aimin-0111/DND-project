@@ -5,6 +5,7 @@ extends SceneTree
 ## Usage:
 ##   godot --headless --path game --script res://tests/run_tests.gd
 
+const TEST_SAVE_DIR := "user://__test_saves/"
 const TEST_PATHS := [
 	"res://tests/unit/test_smoke.gd",
 	"res://tests/unit/test_settings_store.gd",
@@ -31,6 +32,8 @@ const TEST_PATHS := [
 	"res://tests/unit/test_travel_command.gd",
 	"res://tests/integration/test_world_squares.gd",
 	"res://tests/integration/test_status_line.gd",
+	"res://tests/unit/test_save_slots.gd",
+	"res://tests/integration/test_web_bugs.gd",
 ]
 
 
@@ -43,7 +46,11 @@ func _initialize() -> void:
 func _run_all() -> void:
 	var failures: Array[String] = []
 	var files := 0
+	# Tests save and load in their own folder, emptied before every file: the
+	# player's saves stay untouched, and a scene never resumes a leftover save.
+	SaveSystem.save_dir = TEST_SAVE_DIR
 	for path in TEST_PATHS:
+		_clear_test_saves()
 		var script = load(path)
 		if script == null or not (script is GDScript) or not script.can_instantiate():
 			failures.append("%s: failed to load or parse" % path)
@@ -62,6 +69,9 @@ func _run_all() -> void:
 			continue
 		for error in result:
 			failures.append("%s: %s" % [path, str(error)])
+	_clear_test_saves()
+	DirAccess.remove_absolute(TEST_SAVE_DIR)
+	SaveSystem.save_dir = SaveSystem.SAVE_DIR
 	if failures.is_empty():
 		print("PASS: %d test file(s)" % files)
 		quit(0)
@@ -70,3 +80,11 @@ func _run_all() -> void:
 	for failure in failures:
 		printerr("  - %s" % failure)
 	quit(1)
+
+
+func _clear_test_saves() -> void:
+	var dir := DirAccess.open(TEST_SAVE_DIR)
+	if dir == null:
+		return
+	for name in dir.get_files():
+		dir.remove(name)

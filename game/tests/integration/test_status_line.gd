@@ -1,6 +1,7 @@
 extends RefCounted
 ## The story panel's status line follows DM.status_changed (SPEC-main-screen):
-## - copy-paste still shows "Waiting for the AI DM", then "Error: Cancelled.";
+## - copy-paste still shows "Waiting for the AI DM"; Cancel then shows "Turn
+##   cancelled." and "Ready", not an error (bug B4);
 ## - an own-key turn with no key shows "No API key set…" on the status line and
 ##   in the story (not "Error: …"), in both languages, gives the typed text back
 ##   and changes nothing; at an exit the hero also steps back;
@@ -70,8 +71,8 @@ func run() -> Array:
 	return failures
 
 
-## Copy-paste mode, unchanged: "Waiting for the AI DM" (translated) while the
-## paste window is open, then the generic error on Cancel.
+## Copy-paste mode: "Waiting for the AI DM" (translated) while the paste
+## window is open, then "Turn cancelled." and "Ready" on Cancel (bug B4).
 func _copy_paste_checks(main) -> Array:
 	var failures: Array = []
 	_write_settings(SettingsStore.MODE_COPY_PASTE, "")
@@ -84,8 +85,8 @@ func _copy_paste_checks(main) -> Array:
 	var before: String = main.story_log.get_parsed_text()
 	main.dialog._on_cancel()
 	var added: String = main.story_log.get_parsed_text().substr(before.length())
-	if main.status_label.text != Content.t("ui.error") or not added.contains("%s: Cancelled." % Content.t("ui.error")):
-		failures.append("copy-paste Cancel should still show 'Error: Cancelled.', got '%s' / '%s'" % [main.status_label.text, added.strip_edges()])
+	if main.status_label.text != Content.t("ui.ready") or not added.contains(Content.t("ui.turn_cancelled")) or added.contains(Content.t("ui.error")):
+		failures.append("copy-paste Cancel should show 'Turn cancelled.' and 'Ready', got '%s' / '%s'" % [main.status_label.text, added.strip_edges()])
 	if main._busy or main.action_input.text != "I knock.":
 		failures.append("copy-paste Cancel should unlock and give the typed text back")
 	return failures

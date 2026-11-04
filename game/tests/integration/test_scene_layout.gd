@@ -1,5 +1,9 @@
 extends RefCounted
 ## Loads the real main scene and checks the shell, HUD, world and path-finding.
+## A test settings file with a language already picked: the intro line only
+## shows once the language is known (SPEC-main-screen, bug B5).
+
+const TEST_SETTINGS := "user://__test_scene_layout.cfg"
 
 
 func run() -> Array:
@@ -7,6 +11,10 @@ func run() -> Array:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
 		return ["no SceneTree available"]
+	var content = tree.root.get_node("Content")
+	var real_settings: String = content.settings_path
+	content.settings_path = TEST_SETTINGS
+	content.remember_language()
 
 	var main = load("res://main.tscn").instantiate()
 	tree.root.add_child(main)
@@ -45,4 +53,6 @@ func run() -> Array:
 
 	tree.root.remove_child(main)
 	main.free()
+	DirAccess.remove_absolute(TEST_SETTINGS)
+	content.settings_path = real_settings
 	return failures

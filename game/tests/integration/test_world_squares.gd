@@ -165,7 +165,7 @@ func _load_checks(main, world) -> Array:
 	if not Game.load(SLOT):
 		failures.append("the test save should load")
 		return failures
-	main._after_load()
+	main._after_load(Content.t("ui.loaded"))
 	if world.square != saved_square or world.hero_cell() != Vector2i(31, 62):
 		failures.append("loading puts the hero back in %s on (31, 62), got %s %s" % [saved_square, world.square, world.hero_cell()])
 	return failures

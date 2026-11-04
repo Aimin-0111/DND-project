@@ -33,9 +33,6 @@ func _ready() -> void:
 	# Own-key messages are long: the status line wraps rather than widening
 	# the story panel.
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_show_demo_line()
-	if not Content.has_language_choice():
-		_ask_language()
 
 	act_button.pressed.connect(_on_act)
 	action_input.text_submitted.connect(func(_text: String) -> void: _on_act())
@@ -51,6 +48,20 @@ func _ready() -> void:
 	hud.save_requested.connect(_on_save)
 	hud.load_requested.connect(_on_load)
 	Content.language_changed.connect(_on_language_changed)
+	if Content.has_language_choice():
+		_start()
+	else:
+		_ask_language()
+
+
+## Once the language is known: resume the newer save if there is one (a page
+## reload continues the game, bug B8), else the new game's intro line, in the
+## language just known (bug B5).
+func _start() -> void:
+	if _load_newest():
+		_after_load(Content.t("ui.resumed"))
+		return
+	_show_demo_line()
 
 
 func _fit_layout() -> void:
@@ -86,10 +97,7 @@ func _localize() -> void:
 func _show_demo_line() -> void:
 	var tagger := KeywordTagger.new()
 	tagger.load_keywords(Content.keywords(), Content.language())
-	var sample := "La braise rouge, le givre bleu et l'éclair blanc."
-	if Content.language() == "en":
-		sample = "The fire, the frost and the lightning."
-	story_log.add_entry(tagger.tag_option_c(sample))
+	story_log.add_entry(tagger.tag_option_c(Content.t("story.demo_line")))
 
 
 func _on_act() -> void:
@@ -145,7 +153,10 @@ func _play_turn(action: String, typed: String, exit_direction: String) -> void:
 		if not exit_direction.is_empty():
 			Game.set_hero_cell(world.step_back())
 		_set_busy(false)
-		_show_failure(result)
+		if bool(result.get("cancelled", false)):
+			_show_cancelled()
+		else:
+			_show_failure(result)
 		return
 
 	var narration := str(result["narration"])
@@ -220,20 +231,33 @@ func _on_save() -> void:
 
 
 func _on_load() -> void:
-	var loaded := Game.load("manual")
-	if not loaded:
-		loaded = Game.load("auto")
-	if not loaded:
+	if not _load_newest():
 		status_label.text = Content.t("ui.no_save")
 		return
-	_after_load()
+	_after_load(Content.t("ui.loaded"))
 
 
-func _after_load() -> void:
+## Loads the newer of the manual save and the autosave (bug B7), or the other
+## one if the newer doesn't load. A load keeps the language the player picked
+## on this device: it is a device setting, not part of the game.
+func _load_newest() -> bool:
+	var language := Content.language()
+	for slot in SaveSystem.slots_newest_first(["manual", "auto"]):
+		if Game.load(slot):
+			if Content.language() != language:
+				Game.set_language(language)
+			else:
+				Game.state["language"] = language
+			return true
+	return false
+
+
+## `story_line`: "Game loaded" after Load, "Game resumed" at start.
+func _after_load(story_line: String) -> void:
 	_localize()
 	world.show_state(Game.state)
 	status_label.text = Content.t("ui.loaded")
-	story_log.add_plain_line(Content.t("ui.loaded"))
+	story_log.add_plain_line(story_line)
 
 
 func _on_language_requested() -> void:
@@ -279,15 +303,23 @@ func _on_language_picked(lang: String, picker: Control) -> void:
 	Content.remember_language()
 	picker.queue_free()
 	_set_busy(false)
+	_start()
 
 
 func _on_language_changed(_lang: String) -> void:
 	_localize()
 
 
-## A failed turn. The connection's own message (own key: "No API key set…")
-## goes on the status line and in the story as it is; without one (copy-paste
-## Cancel) the generic "Error: …" shows, as before.
+## A cancelled turn (copy-paste Cancel or Esc) is the player's choice, not an
+## error (bug B4): "Turn cancelled." in the story, and the status back to Ready.
+func _show_cancelled() -> void:
+	status_label.text = Content.t("ui.ready")
+	story_log.add_plain_line(Content.t("ui.turn_cancelled"))
+
+
+## A failed turn. The connection's own message (own key: "No API key set…", or
+## the pasted prompt refused) goes on the status line and in the story as it
+## is; without one the generic "Error: …" shows.
 func _show_failure(result: Dictionary) -> void:
 	var status := str(result.get("status", ""))
 	if not status.is_empty():
