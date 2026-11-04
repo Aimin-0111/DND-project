@@ -1,0 +1,76 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/menu.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/settings_dialog.tscn" id="2"]
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="Backdrop" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 0
+offset_left = 8.0
+offset_top = 44.0
+offset_right = 268.0
+offset_bottom = 64.0
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="AiMode" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.76, 0.78, 1)
+text = "AI: copy-paste"
+
+[node name="SaveButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Save"
+
+[node name="LoadButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Load"
+
+[node name="Languages" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="Panel/Margin/VBox/Languages"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Language"
+
+[node name="AiSettingsButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "AI settings"
+
+[node name="CloseButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Close"
+
+[node name="SettingsLayer" type="CanvasLayer" parent="."]
+layer = 3
+
+[node name="SettingsDialog" parent="SettingsLayer" instance=ExtResource("2")]

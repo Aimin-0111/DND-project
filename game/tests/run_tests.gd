@@ -34,6 +34,7 @@ const TEST_PATHS := [
 	"res://tests/integration/test_status_line.gd",
 	"res://tests/unit/test_save_slots.gd",
 	"res://tests/integration/test_web_bugs.gd",
+	"res://tests/integration/test_layout_v2.gd",
 ]
 
 

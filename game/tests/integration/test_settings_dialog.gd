@@ -1,7 +1,8 @@
 extends RefCounted
-## The HUD's gear button and the settings dialog, on a test settings file:
-## masked key field, Save, Clear, Cancel and the HUD's AI mode line. Own-key
-## messages are on the status line now (test_status_line.gd), not in the HUD.
+## Menu → AI settings and the settings dialog, on a test settings file: masked
+## key field, Save, Clear, Cancel and the menu's AI mode line. The gear icon is
+## on the top bar's Menu button now (layout v2). Own-key messages are on the
+## status line (test_status_line.gd), not in the bars or the menu.
 
 const TEST_SETTINGS := "user://__test_settings_dialog.cfg"
 const FAKE_KEY := "FAKE-KEY-FOR-TESTS"
@@ -18,25 +19,36 @@ func run() -> Array:
 	content.settings_path = TEST_SETTINGS
 	DirAccess.remove_absolute(TEST_SETTINGS)
 
-	var hud = load("res://ui/hud.tscn").instantiate()
-	tree.root.add_child(hud)
-	var gear: Button = hud.get_node("VBox/Actions/SettingsButton")
-	var mode_line: Label = hud.get_node("VBox/AiMode")
-	var dialog: Control = hud.get_node("SettingsLayer/SettingsDialog")
+	var top_bar = load("res://ui/top_bar.tscn").instantiate()
+	tree.root.add_child(top_bar)
+	var menu_button: Button = top_bar.get_node("HBox/MenuButton")
+	if menu_button.icon == null or menu_button.text != content.t("ui.menu"):
+		failures.append("the Menu button should show the gear as an icon (the font has no gear glyph) and '%s'" % content.t("ui.menu"))
+	tree.root.remove_child(top_bar)
+	top_bar.free()
+
+	var menu = load("res://ui/menu.tscn").instantiate()
+	tree.root.add_child(menu)
+	var gear: Button = menu.get_node("Panel/Margin/VBox/AiSettingsButton")
+	var mode_line: Label = menu.get_node("Panel/Margin/VBox/AiMode")
+	var dialog: Control = menu.get_node("SettingsLayer/SettingsDialog")
 	var mode_option: OptionButton = dialog.get_node("Center/Panel/Margin/VBox/ModeOption")
 	var key_field: LineEdit = dialog.get_node("Center/Panel/Margin/VBox/KeyRow/KeyField")
 	var feedback: Label = dialog.get_node("Center/Panel/Margin/VBox/Feedback")
 
-	if gear.icon == null or not gear.text.is_empty():
-		failures.append("the gear button should be an icon (the font has no gear glyph)")
+	if gear.text != content.t("ui.ai_settings"):
+		failures.append("the menu entry should say '%s', got '%s'" % [content.t("ui.ai_settings"), gear.text])
 	if dialog.visible:
 		failures.append("the settings dialog should start hidden")
 	if mode_line.text != content.t("ui.hud_ai_copy_paste"):
-		failures.append("the HUD should show copy-paste mode by default, got '%s'" % mode_line.text)
+		failures.append("the menu should show copy-paste mode by default, got '%s'" % mode_line.text)
 
+	menu.open()
 	gear.pressed.emit()
 	if not dialog.visible:
-		failures.append("the gear button should open the settings dialog")
+		failures.append("Menu → AI settings should open the settings dialog")
+	if menu.visible:
+		failures.append("choosing AI settings should close the menu")
 	if not key_field.secret:
 		failures.append("the key field must be masked")
 	if mode_option.selected != 0 or not key_field.text.is_empty():
@@ -56,7 +68,7 @@ func run() -> Array:
 	if dialog.visible or not key_field.text.is_empty():
 		failures.append("Save should close the dialog and empty the key field")
 	if mode_line.text != content.t("ui.hud_ai_own_key"):
-		failures.append("the HUD should show own-key mode after Save")
+		failures.append("the menu should show own-key mode after Save")
 
 	gear.pressed.emit()
 	if mode_option.selected != 1:
@@ -92,8 +104,8 @@ func run() -> Array:
 	if dialog.visible or after_cancel.mode != SettingsStore.MODE_OWN_KEY or after_cancel.api_key != "":
 		failures.append("Cancel should close without saving")
 
-	if hud.get_node_or_null("VBox/AiNotice") != null:
-		failures.append("the HUD should have no own-key message line (SPEC-main-screen: the status line shows them)")
+	if menu.find_child("AiNotice", true, false) != null:
+		failures.append("the menu should have no own-key message line (SPEC-main-screen: the status line shows them)")
 
 	var other := "en" if start_language == "fr" else "fr"
 	content.set_language(other)
@@ -102,8 +114,8 @@ func run() -> Array:
 		failures.append("the dialog should follow the language")
 	content.set_language(start_language)
 
-	tree.root.remove_child(hud)
-	hud.free()
+	tree.root.remove_child(menu)
+	menu.free()
 	DirAccess.remove_absolute(TEST_SETTINGS)
 	content.settings_path = real_settings
 	return failures

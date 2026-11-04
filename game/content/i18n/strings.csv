@@ -84,3 +84,14 @@ ui.reply_is_prompt,"C'est le prompt, pas la réponse du MJ.","That's the prompt,
 ui.turn_cancelled,Tour annulé.,Turn cancelled.
 ui.resumed,Partie reprise,Game resumed
 story.demo_line,"La braise rouge, le givre bleu et l'éclair blanc.","The fire, the frost and the lightning."
+ui.menu,Menu,Menu
+ui.backpack,Sac à dos,Backpack
+ui.close,Fermer,Close
+ui.ai_settings,Réglages de l'IA,AI settings
+ui.clock,"Jour {day}, {time}","Day {day}, {time}"
+weather.clear,Beau temps,Clear
+weather.rain,Pluie,Rain
+weather.fog,Brouillard,Fog
+weather.storm,Orage,Storm
+weather.snow,Neige,Snow
+weather.ash,Pluie de cendres,Ash rain

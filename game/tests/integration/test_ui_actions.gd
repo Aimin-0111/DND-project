@@ -1,6 +1,6 @@
 extends RefCounted
-## UI-level save/load, first-launch language, language toggle and
-## responsive reparenting.
+## UI-level save/load, first-launch language, the language switch (Menu →
+## Language) and responsive reparenting.
 
 const TEST_SETTINGS := "user://__test_settings.cfg"
 
@@ -28,15 +28,15 @@ func run() -> Array:
 		picker.find_child(other, true, false).pressed.emit()
 		if content.language() != other or not content.has_language_choice():
 			failures.append("picking a language should apply and remember it")
-		main._on_language_requested()
+		_switch_language(main, content)
 		if content.language() != start_language:
 			failures.append("toggling back should restore the start language")
 
 	var language_before: String = content.language()
-	main._on_language_requested()
+	_switch_language(main, content)
 	if content.language() == language_before:
 		failures.append("language toggle did not change Content")
-	main._on_language_requested()
+	_switch_language(main, content)
 	if content.language() != language_before:
 		failures.append("second language toggle did not restore Content")
 
@@ -50,20 +50,29 @@ func run() -> Array:
 
 	main.size = Vector2(800, 720)
 	main._fit_layout()
-	var stack: VSplitContainer = main.get_node("Stack")
-	var split: HSplitContainer = main.get_node("Split")
+	var stack: VSplitContainer = main.get_node("Layout/Stack")
+	var split: HSplitContainer = main.get_node("Layout/Split")
 	if not stack.visible or split.visible:
 		failures.append("narrow window should use the stacked layout")
-	if main.get_node("Stack/WorldView").get_parent() != stack:
+	var world_view = main.get_node_or_null("Layout/Stack/WorldPanel/WorldView")
+	if world_view == null or world_view.get_parent().get_parent() != stack or main.story_panel.get_parent() != stack:
 		failures.append("world was not reparented into the stacked layout")
 
 	main.size = Vector2(1280, 720)
 	main._fit_layout()
 	if not split.visible or stack.visible:
 		failures.append("wide window should use the side-by-side layout")
+	if split.get_child(0) != main.story_panel or split.get_child(1) != main.world_panel:
+		failures.append("side by side, the story is on the left and the world on the right")
 
 	tree.root.remove_child(main)
 	main.free()
 	DirAccess.remove_absolute(TEST_SETTINGS)
 	content.settings_path = real_settings
 	return failures
+
+
+## Menu → the other language's entry.
+func _switch_language(main, content) -> void:
+	var other := "en" if content.language() == "fr" else "fr"
+	main.menu.get_node("Panel/Margin/VBox/Languages/" + other).pressed.emit()

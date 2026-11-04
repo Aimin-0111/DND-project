@@ -1,0 +1,54 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://ui/top_bar.gd" id="1"]
+[ext_resource type="Texture2D" path="res://ui/icons/gear.svg" id="2"]
+
+[sub_resource type="StyleBoxFlat" id="Style"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.09, 0.1, 0.12, 1)
+
+[node name="TopBar" type="PanelContainer"]
+theme_override_styles/panel = SubResource("Style")
+script = ExtResource("1")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MenuButton" type="Button" parent="HBox"]
+layout_mode = 2
+text = "Menu"
+icon = ExtResource("2")
+
+[node name="Info" type="HBoxContainer" parent="HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Place" type="Label" parent="HBox/Info"]
+layout_mode = 2
+text = "Mill Road"
+
+[node name="PlaceDot" type="Label" parent="HBox/Info"]
+layout_mode = 2
+text = "·"
+
+[node name="Clock" type="Label" parent="HBox/Info"]
+layout_mode = 2
+text = "Day 1, 08:00"
+
+[node name="WeatherDot" type="Label" parent="HBox/Info"]
+layout_mode = 2
+text = "·"
+
+[node name="Weather" type="Label" parent="HBox/Info"]
+layout_mode = 2
+text = "Clear"
+
+[node name="BackpackButton" type="Button" parent="HBox"]
+layout_mode = 2
+text = "Backpack"

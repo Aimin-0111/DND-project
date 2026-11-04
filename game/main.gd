@@ -1,25 +1,35 @@
 extends Control
-## Main shell: 40/60 split (stacked below 900 px), HUD, story panel and the
-## copy-paste turn. The world stays in a SubViewport so its camera is isolated.
-## A walk that ends on an exit of the square sends the automatic travel turn
-## ("I head north (forest).", SPEC-main-screen.md); the DM decides the travel.
+## Main shell, layout v2 (SPEC-main-screen "Layout v2 (Beta-0.4)"): the top bar
+## (Menu, place · clock · weather, Backpack), the story on the left (40%) and
+## the world on the right (60%, stacked below 900 px), the bottom bar, and the
+## windows over them (the menu, the backpack). It runs the copy-paste turn.
+## The world stays in a SubViewport so its camera is isolated. A walk that ends
+## on an exit of the square sends the automatic travel turn ("I head north
+## (forest).", SPEC-main-screen.md); the DM decides the travel.
 
-const SPLIT_RATIO := 0.6
+const STORY_RATIO := 0.4
 const STACK_BELOW := 900
+## Shortcut keys (SPEC-main-screen, "Keys"); they wait while a text field has focus.
+const KEY_BACKPACK := KEY_B
 
-@onready var split: HSplitContainer = $Split
-@onready var stack: VSplitContainer = $Stack
-@onready var world_view: SubViewportContainer = $Split/WorldView
-@onready var story_panel: PanelContainer = $Split/StoryPanel
-@onready var story_log: RichTextLabel = $Split/StoryPanel/VBox/StoryLog
-@onready var story_title: Label = $Split/StoryPanel/VBox/Title
-@onready var action_input: LineEdit = $Split/StoryPanel/VBox/ActionBar/ActionInput
-@onready var act_button: Button = $Split/StoryPanel/VBox/ActionBar/ActButton
-@onready var status_label: Label = $Split/StoryPanel/VBox/Status
+@onready var split: HSplitContainer = $Layout/Split
+@onready var stack: VSplitContainer = $Layout/Stack
+@onready var world_panel: Control = $Layout/Split/WorldPanel
+@onready var world_view: SubViewportContainer = $Layout/Split/WorldPanel/WorldView
+@onready var dice_zone: Control = $Layout/Split/WorldPanel/DiceZone
+@onready var story_panel: PanelContainer = $Layout/Split/StoryPanel
+@onready var story_log: RichTextLabel = $Layout/Split/StoryPanel/VBox/StoryLog
+@onready var story_title: Label = $Layout/Split/StoryPanel/VBox/Title
+@onready var action_input: LineEdit = $Layout/Split/StoryPanel/VBox/ActionBar/ActionInput
+@onready var act_button: Button = $Layout/Split/StoryPanel/VBox/ActionBar/ActButton
+@onready var status_label: Label = $Layout/Split/StoryPanel/VBox/Status
 @onready var dialog: PanelContainer = $DialogLayer/PasteDialog
-@onready var director: Node = $Split/WorldView/SubViewport/World/SceneDirector
-@onready var hud = $HUDLayer/Hud
-@onready var world = $Split/WorldView/SubViewport/World
+@onready var world = $Layout/Split/WorldPanel/WorldView/SubViewport/World
+@onready var director: Node = $Layout/Split/WorldPanel/WorldView/SubViewport/World/SceneDirector
+@onready var top_bar = $Layout/TopBar
+@onready var bottom_bar = $Layout/BottomBar
+@onready var menu = $WindowLayer/Menu
+@onready var backpack_window: GameWindow = $WindowLayer/BackpackWindow
 
 var _busy := false
 var _stacked := false
@@ -44,9 +54,11 @@ func _ready() -> void:
 	director.roll_requested.connect(_on_roll_requested)
 	director.moved_to.connect(Game.set_location)
 	world.walk_ended.connect(_on_walk_ended)
-	hud.language_requested.connect(_on_language_requested)
-	hud.save_requested.connect(_on_save)
-	hud.load_requested.connect(_on_load)
+	top_bar.menu_pressed.connect(_toggle_menu)
+	top_bar.backpack_pressed.connect(_toggle_window.bind(backpack_window))
+	menu.save_requested.connect(_on_save)
+	menu.load_requested.connect(_on_load)
+	menu.language_chosen.connect(_on_language_chosen)
 	Content.language_changed.connect(_on_language_changed)
 	if Content.has_language_choice():
 		_start()
@@ -73,15 +85,19 @@ func _fit_layout() -> void:
 		# VSplitContainer.split_offset is also relative to the centre.
 		stack.split_offset = int(size.y * 0.05)
 	else:
-		split.split_offset = int(size.x * (SPLIT_RATIO - 0.5))
+		# split_offset is measured from the centre: 40/60 means -10% of the width.
+		split.split_offset = int(size.x * (STORY_RATIO - 0.5))
 
 
+## Side by side the story is on the left; stacked (narrow windows) the world
+## is on top.
 func _set_stacked(value: bool) -> void:
 	if _stacked == value:
 		return
 	var target: Container = stack if value else split
-	world_view.reparent(target)
+	world_panel.reparent(target)
 	story_panel.reparent(target)
+	target.move_child(story_panel, 1 if value else 0)
 	split.visible = not value
 	stack.visible = value
 	_stacked = value
@@ -260,9 +276,62 @@ func _after_load(story_line: String) -> void:
 	story_log.add_plain_line(story_line)
 
 
-func _on_language_requested() -> void:
-	Game.set_language("en" if Content.language() == "fr" else "fr")
+## Menu → Language: the whole screen relabels at once. The language is a
+## device setting, remembered for the next launch.
+func _on_language_chosen(lang: String) -> void:
+	Game.set_language(lang)
 	Content.remember_language()
+
+
+## The Menu button: the menu opens under it, and closes the other windows.
+func _toggle_menu() -> void:
+	if menu.visible:
+		menu.close()
+		return
+	_close_windows()
+	var button: Rect2 = top_bar.menu_button.get_global_rect()
+	menu.open(Vector2(button.position.x, button.end.y + 4.0))
+
+
+## The menu and the windows over the screen: one is open at a time.
+func _windows() -> Array:
+	return [menu, backpack_window]
+
+
+func _close_windows() -> void:
+	for window in _windows():
+		window.close()
+
+
+func _toggle_window(window: GameWindow) -> void:
+	if window.visible:
+		window.close()
+		return
+	_close_windows()
+	window.open()
+
+
+## B opens or closes the backpack. Typing "b" in the action box only types it:
+## a focused text field takes the key first, and the keys also wait while a
+## dialog is open. Esc is handled by the open window itself.
+func _unhandled_key_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key == null or not key.pressed or key.echo or key.ctrl_pressed or key.alt_pressed or key.meta_pressed:
+		return
+	if _shortcuts_blocked():
+		return
+	if key.keycode == KEY_BACKPACK:
+		_toggle_window(backpack_window)
+		get_viewport().set_input_as_handled()
+
+
+## True while a text field has focus or a dialog is open (the paste window,
+## the settings dialog, the first-launch language choice).
+func _shortcuts_blocked() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return true
+	return dialog.visible or menu.settings_dialog.visible or $DialogLayer.has_node("LanguagePicker")
 
 
 ## First launch: the player picks the language before anything else. The
