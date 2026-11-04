@@ -1,9 +1,9 @@
 extends Control
 ## Main shell, layout v2 (SPEC-main-screen "Layout v2 (Beta-0.4)"): the top bar
 ## (Menu, place · clock · weather, Backpack), the story on the left (40%) and
-## the world on the right (60%, stacked below 900 px) with the minimap, the
-## bottom bar, and the windows over them (the menu, the backpack, the world
-## map). It runs the copy-paste turn.
+## the world on the right (60%, stacked below 900 px) with the tracked quest
+## and the minimap, the bottom bar, and the windows over them (the menu, the
+## backpack, the world map, the Codex). It runs the copy-paste turn.
 ## The world stays in a SubViewport so its camera is isolated. A walk that ends
 ## on an exit of the square sends the automatic travel turn ("I head north
 ## (forest).", SPEC-main-screen.md); the DM decides the travel.
@@ -18,6 +18,7 @@ const KEY_WORLD_MAP := KEY_M
 @onready var stack: VSplitContainer = $Layout/Stack
 @onready var world_panel: Control = $Layout/Split/WorldPanel
 @onready var world_view: SubViewportContainer = $Layout/Split/WorldPanel/WorldView
+@onready var tracked_quest: TrackedQuest = $Layout/Split/WorldPanel/TrackedQuest
 @onready var minimap: Minimap = $Layout/Split/WorldPanel/Minimap
 @onready var dice_zone: Control = $Layout/Split/WorldPanel/DiceZone
 @onready var story_panel: PanelContainer = $Layout/Split/StoryPanel
@@ -34,6 +35,7 @@ const KEY_WORLD_MAP := KEY_M
 @onready var menu = $WindowLayer/Menu
 @onready var backpack_window: GameWindow = $WindowLayer/BackpackWindow
 @onready var world_map_window: WorldMapWindow = $WindowLayer/WorldMapWindow
+@onready var codex_window: CodexWindow = $WindowLayer/CodexWindow
 
 var _busy := false
 var _stacked := false
@@ -64,6 +66,7 @@ func _ready() -> void:
 	menu.save_requested.connect(_on_save)
 	menu.load_requested.connect(_on_load)
 	menu.language_chosen.connect(_on_language_chosen)
+	menu.codex_requested.connect(_open_window.bind(codex_window))
 	Content.language_changed.connect(_on_language_changed)
 	if Content.has_language_choice():
 		_start()
@@ -300,7 +303,7 @@ func _toggle_menu() -> void:
 
 ## The menu and the windows over the screen: one is open at a time.
 func _windows() -> Array:
-	return [menu, backpack_window, world_map_window]
+	return [menu, backpack_window, world_map_window, codex_window]
 
 
 func _close_windows() -> void:

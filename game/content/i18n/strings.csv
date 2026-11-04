@@ -97,3 +97,5 @@ weather.snow,Neige,Snow
 weather.ash,Pluie de cendres,Ash rain
 ui.world_map,Carte du monde,World map
 ui.world_map_hint,Clique ou appuie sur M pour la carte du monde,Click or press M for the world map
+ui.codex,Codex,Codex
+ui.tracked_quest,{title} : {stage},{title}: {stage}

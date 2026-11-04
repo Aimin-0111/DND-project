@@ -13,7 +13,11 @@ extends RefCounted
 ##   on the hero's square; it recentres after a travel and a load;
 ## - the world map window: a click on the minimap or M opens it, the whole
 ##   grid in the same colours with the hero marked; M, Esc, Close or a click
-##   outside closes it; a click on it never travels.
+##   outside closes it; a click on it never travels;
+## - Menu → Codex: a read-only, scrolling window with the current language's
+##   Codex pages (the AI's), also from CRLF files;
+## - the tracked quest at the top left of the world: the first unfinished
+##   quest's title and stage in the current language, hidden when none.
 ## A test settings file; the runner points the saves at a test folder.
 
 const TEST_SETTINGS := "user://__test_layout_v2.cfg"
@@ -55,6 +59,8 @@ func run() -> Array:
 	failures.append_array(_dice_zone_checks(main))
 	failures.append_array(_minimap_checks(main))
 	failures.append_array(_world_map_checks(main))
+	failures.append_array(_codex_checks(main, content))
+	failures.append_array(_tracked_quest_checks(main, content))
 
 	tree.root.remove_child(main)
 	main.free()
@@ -306,7 +312,7 @@ func _key_checks(main) -> Array:
 		viewport.push_input(_typed(letter), true)
 	if main.action_input.text != "bm1":
 		failures.append("typing b, m and 1 in the action box types them, got '%s'" % main.action_input.text)
-	if window.visible or main.menu.visible or (main.get("world_map_window") != null and main.world_map_window.visible):
+	if window.visible or main.menu.visible or main.world_map_window.visible:
 		failures.append("typing in the action box opens nothing")
 
 	main.action_input.text = ""
@@ -537,6 +543,122 @@ func _world_map_checks(main) -> Array:
 	viewport.push_input(_click(Vector2(4, main.size.y - 4), false), true)
 	if window.visible:
 		failures.append("a click outside closes the world map")
+	return failures
+
+
+## The Codex lines missing from what the window shows (Markdown marks aside).
+func _missing_codex_lines(codex: String, shown: String) -> Array:
+	var missing: Array = []
+	for raw in codex.split("\n"):
+		var line := raw.strip_edges().trim_prefix("## ").trim_prefix("- ").replace("**", "").strip_edges()
+		if not line.is_empty() and not shown.contains(line):
+			missing.append(line)
+	return missing
+
+
+func _codex_checks(main, content) -> Array:
+	var failures: Array = []
+	var window = main.get_node_or_null("WindowLayer/CodexWindow")
+	if window == null or main.get("codex_window") != window:
+		return ["the Codex window should be WindowLayer/CodexWindow (main.codex_window)"]
+	var entry: Button = main.menu.get_node_or_null(ENTRIES + "CodexButton")
+	if entry == null:
+		return ["the menu needs a Codex entry (CodexButton)"]
+	var order := []
+	for name in ["SaveButton", "LoadButton", "Languages", "CodexButton", "AiSettingsButton", "CloseButton"]:
+		order.append(main.menu.get_node(ENTRIES + name).get_index())
+	var sorted := order.duplicate()
+	sorted.sort()
+	if order != sorted:
+		failures.append("the menu lists Save, Load, Language, Codex, AI settings, Close")
+	var viewport: Viewport = main.get_viewport()
+	for lang in ["en", "fr"]:
+		content.set_language(lang)
+		if entry.text != Content.t_in("ui.codex", lang):
+			failures.append("(%s) the menu entry says '%s'" % [lang, Content.t_in("ui.codex", lang)])
+		_open_menu(main)
+		entry.pressed.emit()
+		if not window.visible or main.menu.visible:
+			failures.append("(%s) Menu → Codex opens the Codex window and closes the menu" % lang)
+			continue
+		var text = window.get_node_or_null(WINDOW + "Body/Text")
+		if not (text is RichTextLabel) or not text.scroll_active:
+			return failures + ["the Codex window shows a read-only, scrolling Body/Text"]
+		var title: Label = window.get_node(WINDOW + "Header/Title")
+		if title.text != Content.t_in("ui.codex", lang):
+			failures.append("(%s) the Codex window's title is '%s'" % [lang, Content.t_in("ui.codex", lang)])
+		var missing := _missing_codex_lines(Content.codex_text(), text.get_parsed_text())
+		if Content.codex_text().strip_edges().is_empty() or not missing.is_empty():
+			failures.append("(%s) the Codex window shows the AI's Codex pages, missing %s" % [lang, str(missing.slice(0, 3))])
+		viewport.push_input(_key(KEY_ESCAPE, 0), true)
+		if window.visible:
+			failures.append("(%s) Esc closes the Codex window" % lang)
+
+	# A language switch while it is open; its close button.
+	content.set_language("en")
+	_open_menu(main)
+	entry.pressed.emit()
+	content.set_language("fr")
+	var shown: String = window.get_node(WINDOW + "Body/Text").get_parsed_text()
+	if not _missing_codex_lines(Content.codex_text(), shown).is_empty():
+		failures.append("the open Codex window follows a language switch")
+	content.set_language("en")
+	window.get_node(WINDOW + "Header/CloseButton").pressed.emit()
+	if window.visible:
+		failures.append("the close button closes the Codex window")
+
+	# The writer's files: CRLF line ends, and square brackets stay plain text.
+	var bbcode: String = CodexWindow.to_bbcode("## Oda\r\n- **Id** : oda\r\n[b]not bold[/b]\r\n")
+	if bbcode.contains("\r") or not bbcode.contains("[lb]b]not bold") or not bbcode.contains("[b]Id[/b]"):
+		failures.append("the Codex shows CRLF files and square brackets as plain text: %s" % bbcode.c_escape())
+	return failures
+
+
+func _tracked_quest_checks(main, content) -> Array:
+	var failures: Array = []
+	var world_panel: Control = main.get_node("Layout/Split/WorldPanel")
+	var label = world_panel.get_node_or_null("TrackedQuest")
+	if not (label is Label) or main.get("tracked_quest") != label:
+		return ["the world panel should hold the TrackedQuest label (main.tracked_quest)"]
+	Game.new_game(12345)
+	for lang in ["en", "fr"]:
+		content.set_language(lang)
+		var want := Content.t("ui.tracked_quest").format({
+			"title": Content.t("quest.the_silent_mill.title"),
+			"stage": Content.t("quest.the_silent_mill.stage0"),
+		})
+		if not label.visible or label.text != want:
+			failures.append("(%s) the tracked quest shows '%s', got '%s'" % [lang, want, label.text])
+	content.set_language("en")
+	layout(main)
+	var rect: Rect2 = label.get_global_rect()
+	var panel_rect := world_panel.get_global_rect()
+	if rect.position.x > panel_rect.position.x + 24.0 or rect.position.y > panel_rect.position.y + 24.0 or not panel_rect.encloses(rect):
+		failures.append("the tracked quest sits at the top left of the world panel: %s in %s" % [rect, panel_rect])
+	if rect.intersects(main.minimap.get_global_rect()):
+		failures.append("the tracked quest doesn't cover the minimap")
+	if label.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		failures.append("the tracked quest does nothing when clicked (the click goes to the world)")
+
+	# The stage moves on through core; a finished quest hides the label.
+	Game.apply_turn({"quest_updates": [{"id": "the_silent_mill", "stage": 1}]}, [])
+	if not label.text.ends_with(Content.t("quest.the_silent_mill.stage1")):
+		failures.append("the tracked quest follows the quest's stage, got '%s'" % label.text)
+	Game.apply_turn({"quest_updates": [{"id": "the_silent_mill", "stage": 2, "done": true}]}, [])
+	if label.visible:
+		failures.append("the tracked quest hides when no quest is running")
+	Game.state["quests"] = {}
+	Game.state_changed.emit(Game.state)
+	if label.visible:
+		failures.append("the tracked quest hides with no quest at all")
+	# Hand-edited saves: broken entries are skipped.
+	Game.state["quests"] = {"the_silent_mill": "broken", "unknown_quest": {"stage": "x"}}
+	Game.state_changed.emit(Game.state)
+	if label.visible:
+		failures.append("broken quest entries show nothing")
+	Game.new_game(12345)
+	if not label.visible:
+		failures.append("a new game tracks its quest again")
 	return failures
 
 

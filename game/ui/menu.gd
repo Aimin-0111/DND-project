@@ -1,13 +1,14 @@
 extends Control
 ## The Menu of layout v2, opened by the top bar's Menu button
 ## (SPEC-main-screen, "Menu"): the AI mode at the top, then Save, Load,
-## Language, AI settings and Close. It owns the settings dialog of M1 (AI mode
+## Language, Codex, AI settings and Close. It owns the settings dialog of M1 (AI mode
 ## and API key). Esc, Close or a click outside closes it, and so does choosing
 ## an entry, except a language: the menu stays open in the new language.
 
 signal save_requested
 signal load_requested
 signal language_chosen(lang: String)
+signal codex_requested
 
 @onready var backdrop: Control = $Backdrop
 @onready var panel: PanelContainer = $Panel
@@ -16,6 +17,7 @@ signal language_chosen(lang: String)
 @onready var load_button: Button = $Panel/Margin/VBox/LoadButton
 @onready var languages: HBoxContainer = $Panel/Margin/VBox/Languages
 @onready var language_label: Label = $Panel/Margin/VBox/Languages/Label
+@onready var codex_button: Button = $Panel/Margin/VBox/CodexButton
 @onready var ai_settings_button: Button = $Panel/Margin/VBox/AiSettingsButton
 @onready var close_button: Button = $Panel/Margin/VBox/CloseButton
 @onready var settings_dialog: SettingsDialog = $SettingsLayer/SettingsDialog
@@ -32,6 +34,7 @@ func _ready() -> void:
 		languages.add_child(button)
 	save_button.pressed.connect(_on_save)
 	load_button.pressed.connect(_on_load)
+	codex_button.pressed.connect(_on_codex)
 	ai_settings_button.pressed.connect(_on_ai_settings)
 	close_button.pressed.connect(close)
 	backdrop.gui_input.connect(_on_backdrop_input)
@@ -73,6 +76,11 @@ func _on_language(lang: String) -> void:
 	language_chosen.emit(lang)
 
 
+func _on_codex() -> void:
+	close()
+	codex_requested.emit()
+
+
 func _on_ai_settings() -> void:
 	close()
 	settings_dialog.open()
@@ -95,6 +103,7 @@ func _localize() -> void:
 		var button: Button = languages.get_node(lang)
 		button.text = Content.t_in("ui.language_name", lang)
 		button.disabled = lang == Content.language()
+	codex_button.text = Content.t("ui.codex")
 	ai_settings_button.text = Content.t("ui.ai_settings")
 	close_button.text = Content.t("ui.close")
 	_refresh_ai_mode()

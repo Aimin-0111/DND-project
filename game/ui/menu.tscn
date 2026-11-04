@@ -62,6 +62,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Language"
 
+[node name="CodexButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+text = "Codex"
+
 [node name="AiSettingsButton" type="Button" parent="Panel/Margin/VBox"]
 layout_mode = 2
 text = "AI settings"
