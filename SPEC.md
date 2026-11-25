@@ -105,7 +105,7 @@ The lead's wish (November 4, 2026). The lead's sentence was cut off after "build
 Set the Godot path once per terminal (Git Bash):
 
 ```bash
-GODOT="/c/2026-2027/DND project/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe"
+GODOT="/c/Document/Projects/DND project/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe"
 ```
 
 | Task | Command |

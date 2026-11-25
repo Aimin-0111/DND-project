@@ -99,7 +99,7 @@
 Une fois `game/` créé (tâche 1), sur la machine du lead (Git Bash ; commandes *provisoires* tant que le moteur n'est pas confirmé) :
 
 ```bash
-GODOT="/c/2026-2027/DND project/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe"
+GODOT="/c/Document/Projects/DND project/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe"
 "$GODOT" --headless --path game --script res://tests/run_all.gd                    # tous les tests, code 1 si échec
 "$GODOT" --headless --path game --export-release "Web" ../builds/web/index.html     # build web
 python -m http.server 8000 --directory builds/web                                   # jouer sur http://localhost:8000

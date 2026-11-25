@@ -5,7 +5,7 @@
 Commands used below (Git Bash, see SPEC.md):
 
 ```bash
-GODOT="/c/2026-2027/DND project/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe"
+GODOT="/c/Document/Projects/DND project/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe"
 ```
 
 - **Tests:** `"$GODOT" --headless --path game --script res://tests/run_all.gd`
