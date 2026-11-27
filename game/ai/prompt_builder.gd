@@ -3,6 +3,9 @@ extends RefCounted
 ## Builds the AI prompt from most stable to least stable, so prompt caching can
 ## reuse the beginning. The language and the player action are last.
 
+const RULES_HEADER := "=== RULES ==="
+const TURN_INPUT_HEADER := "=== TURN INPUT ==="
+
 ## allowed = {"locations": [...], "creatures": [...], "items": [...], "skills": [...], "quests": [...]}
 ## plus, with the world map, "travel": [...] and "map": {...}. The map view is
 ## taken out of the allowed ids and becomes its own MAP part.
@@ -36,15 +39,23 @@ static func build(state: Dictionary, action: String, rules: String, codex: Strin
 ## Copy-paste mode needs everything as ONE block of text.
 static func to_single_text(prompt: Dictionary) -> String:
 	return "\n\n".join([
-		"=== RULES ===\n" + str(prompt["rules"]),
+		RULES_HEADER + "\n" + str(prompt["rules"]),
 		"=== CODEX ===\n" + str(prompt["codex"]),
 		"=== STORY SO FAR ===\n" + str(prompt.get("summary", "")),
 		"=== STATE ===\n" + JSON.stringify(prompt["state"], "\t"),
 		"=== MAP ===\n" + _map_text(prompt.get("map")),
 		"=== ALLOWED IDS ===\n" + JSON.stringify(prompt["allowed"], "\t"),
 		"=== LAST ROLL ===\n" + _roll_text(prompt.get("last_roll")),
-		"=== TURN INPUT ===\n" + JSON.stringify(prompt["turn"], "\t"),
+		TURN_INPUT_HEADER + "\n" + JSON.stringify(prompt["turn"], "\t"),
 	])
+
+
+## True when `text` is the game's own copy-paste prompt (bug B2): it holds the
+## TURN INPUT header or starts with the RULES header. A player who pastes the
+## prompt back instead of the DM's reply gets "That's the prompt" rather than
+## screens of rules read as narration (the rules quote the <<STATE>> marker).
+static func is_prompt_text(text: String) -> bool:
+	return text.contains(TURN_INPUT_HEADER) or text.strip_edges().begins_with(RULES_HEADER)
 
 
 static func _map_text(view: Variant) -> String:

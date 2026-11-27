@@ -24,7 +24,7 @@ A solo RPG with an AI Dungeon Master that narrates each turn. About 40% of the s
 
 ## Decisions
 
-- **Engine:** Godot 4.7 + GDScript (proposed), kept or replaced by TypeScript + Phaser 4 at the M1 gate. Godot console exe: `C:\2026-2027\DND project\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`.
+- **Engine:** Godot 4.7 + GDScript (proposed), kept or replaced by TypeScript + Phaser 4 at the M1 gate. Godot console exe: `C:\Document\Projects\DND project\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`.
 - **Tests:** a small home-made runner (`game/tests/run_all.gd`) until the engine decision.
 - **Hosting:** itch.io after M1 (private page first). Cloudflare Workers as the AI key proxy (M2). Not Netlify.
 - **Team answers (Oct 19):**

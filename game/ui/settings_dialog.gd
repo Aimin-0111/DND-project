@@ -1,6 +1,6 @@
 class_name SettingsDialog
 extends Control
-## Settings dialog, opened by the HUD's gear button: the AI mode and the
+## Settings dialog, opened by Menu → AI settings (menu.gd): the AI mode and the
 ## player's own API key, stored only in the settings file on this device
 ## (SettingsStore).
 ##

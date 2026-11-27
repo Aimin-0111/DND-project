@@ -28,9 +28,11 @@ func _ready() -> void:
 
 
 ## Returns {ok, narration, commands, changes, errors}, plus "status" (the
-## message for the player) when the own-key connection has one. Only an empty
-## reply is a failed turn. Otherwise bad commands and changes are dropped one by
-## one and listed in errors (the debug log); the rest still applies.
+## message for the player) when the own-key connection has one. Failed turns:
+## an empty reply ("cancelled": true for a copy-paste cancel, which is the
+## player's choice, not an error), and the game's own prompt pasted back as the
+## reply (SPEC-dm, bug B2). Otherwise bad commands and changes are dropped one
+## by one and listed in errors (the debug log); the rest still applies.
 func play_turn(action: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": ["A turn is already running."]}
@@ -61,8 +63,11 @@ func play_turn(action: String) -> Dictionary:
 	_busy = false
 	if reply.strip_edges().is_empty():
 		if status.is_empty():
-			return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": ["Cancelled."]}
+			return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": ["Cancelled."], "cancelled": true}
 		return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": [status], "status": status}
+	if PromptBuilder.is_prompt_text(reply):
+		var message := Content.t("ui.reply_is_prompt")
+		return {"ok": false, "narration": "", "commands": [], "changes": {}, "errors": ["The reply is the game's own prompt."], "status": message}
 	var parsed := DmReplyParser.parse(reply, Game.allowed_ids())
 	for error in parsed["errors"]:
 		push_warning("DM reply: %s" % str(error))
