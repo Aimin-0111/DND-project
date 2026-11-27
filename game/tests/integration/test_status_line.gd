@@ -58,8 +58,8 @@ func run() -> Array:
 	content.set_language(start_language)
 	failures.append_array(_exit_failure_checks(main))
 	failures.append_array(_fake_connection_checks(main, dm, statuses))
-	if main.get_node("HUDLayer/Hud").get_node_or_null("VBox/AiNotice") != null:
-		failures.append("the HUD should have no own-key message line any more")
+	if main.find_child("AiNotice", true, false) != null:
+		failures.append("the bars should have no own-key message line any more")
 
 	dm.status_changed.disconnect(on_status)
 	tree.root.remove_child(main)

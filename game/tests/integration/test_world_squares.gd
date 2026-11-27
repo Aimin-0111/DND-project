@@ -1,6 +1,6 @@
 extends RefCounted
 ## The real main scene with the grid of squares: drawing the start square and
-## a generated one, Oda, camera limits, the HUD place label, an exit sending
+## a generated one, Oda, camera limits, the top bar's place, an exit sending
 ## the automatic travel turn (cancelled: the hero steps back, the typed text
 ## comes back), an exit facing a square that can't be entered, and a load
 ## restoring the square and the hero's tile.
@@ -23,7 +23,7 @@ func run() -> Array:
 	Game.new_game(12345)
 	var main = load("res://main.tscn").instantiate()
 	tree.root.add_child(main)
-	var world = main.get_node("Split/WorldView/SubViewport/World")
+	var world = main.get_node("Layout/Split/WorldPanel/WorldView/SubViewport/World")
 
 	failures.append_array(_start_square_checks(main, world))
 	failures.append_array(_exit_turn_checks(main, world))
@@ -65,9 +65,9 @@ func _start_square_checks(main, world) -> Array:
 		failures.append("the river blocks and the bridge doesn't")
 	if abs(hero.speed - 5.0 * 32.0) > 0.01:
 		failures.append("the hero walks at 5 tiles per second")
-	var place_label: Label = main.get_node("HUDLayer/Hud/VBox/Place")
+	var place_label: Label = main.get_node("Layout/TopBar/HBox/Info/Place")
 	if place_label.text != Content.t("location.mill_road.name"):
-		failures.append("the HUD shows the place, got '%s'" % place_label.text)
+		failures.append("the top bar shows the place, got '%s'" % place_label.text)
 	return failures
 
 
@@ -147,9 +147,9 @@ func _generated_square_checks(main, world) -> Array:
 				mismatches += 1
 	if mismatches != 0:
 		failures.append("walkable tiles on screen should match tiles.csv, %d differ" % mismatches)
-	var place_label: Label = main.get_node("HUDLayer/Hud/VBox/Place")
+	var place_label: Label = main.get_node("Layout/TopBar/HBox/Info/Place")
 	if place_label.text != Content.t("kind.meadow.name"):
-		failures.append("in a generated square the HUD shows its kind, got '%s'" % place_label.text)
+		failures.append("in a generated square the top bar shows its kind, got '%s'" % place_label.text)
 	if world.exit_at(Vector2i(0, 0)) != "" or world.exit_at(Vector2i(31, 63)) != "south" or world.exit_at(Vector2i(10, 0)) != "":
 		failures.append("exits: corners and blocked border tiles aren't exits, the open south edge is")
 	return failures
