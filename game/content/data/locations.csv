@@ -2,3 +2,6 @@ id,square,x,y
 mill_road,sq_24_24,16,31
 mill_bridge,sq_24_24,45,31
 old_mill,sq_24_24,54,29
+mill_hall,mill_inside,8,8
+cellar,mill_cellar,6,5
+back_yard,mill_yard,8,7

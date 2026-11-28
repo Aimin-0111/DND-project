@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dqmj0w71muf18"
+
+[deps]
+
+files=["res://content/maps/rooms.file.translation", "res://content/maps/rooms.kind.translation"]
+
+source_file="res://content/maps/rooms.csv"
+dest_files=["res://content/maps/rooms.file.translation", "res://content/maps/rooms.kind.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

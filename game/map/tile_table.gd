@@ -16,12 +16,14 @@ var walkable: Array[bool] = []
 var layers: PackedStringArray = []
 ## Cell of the tile in the tileset image, counted left to right, row by row.
 var tileset_index: PackedInt32Array = []
+## How many cells, from tileset_index on, hold looks of the same tile (1 or more).
+var variants: PackedInt32Array = []
 var _by_id := {}
 var _by_colour := {}
 
 
 ## Adds a tile; returns false (and adds nothing) when the id or colour is taken.
-func add(id: String, colour: int, is_walkable: bool, layer: String, index: int) -> bool:
+func add(id: String, colour: int, is_walkable: bool, layer: String, index: int, variant_count: int = 1) -> bool:
 	if _by_id.has(id) or _by_colour.has(colour) or ids.size() >= UNKNOWN:
 		return false
 	_by_id[id] = ids.size()
@@ -32,6 +34,7 @@ func add(id: String, colour: int, is_walkable: bool, layer: String, index: int) 
 	walkable.append(is_walkable and layer != OBSTACLE)
 	layers.append(layer)
 	tileset_index.append(index)
+	variants.append(maxi(1, variant_count))
 	return true
 
 

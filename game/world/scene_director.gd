@@ -12,6 +12,8 @@ signal moved_to(location_id: String)
 @export var weather_tint: CanvasModulate
 ## Set by the world: plays a travel (fade, new square, arrival). Awaited.
 var travel_player: Callable
+## Set by the world: indoors the weather doesn't tint the screen.
+var indoor := false
 
 const CREATURE_SCENES := "res://world/creatures/%s.tscn"
 const WEATHER_COLORS := {
@@ -89,14 +91,21 @@ func _spawn(creature_id: String, near_id: String, announce: bool = true, cell: V
 		return
 	var creature: Node2D = load(path).instantiate()
 	creature.set_meta("creature_id", creature_id)
-	creature.global_position = near + Vector2(randf_range(-16.0, 16.0), randf_range(-16.0, 16.0))
+	var placed := near_id.is_empty()
+	creature.global_position = near if placed else near + Vector2(randf_range(-16.0, 16.0), randf_range(-16.0, 16.0))
 	creatures_root.add_child(creature)
+	_idle(creature)
 	if announce:
 		note.emit("%s: %s (%s)" % [Content.t("ui.spawned"), creature_id, near_id])
 
 
-## Where a creature appears: next to the hero, or near a place's marker.
+## Where a creature appears: next to the hero, near a place's marker, or on
+## its own tile (a creature placed in the box by creatures.csv: no "near").
 func _near_position(near_id: String, cell: Variant) -> Vector2:
+	if near_id.is_empty():
+		if cell is Array and cell.size() == 2 and hero.grid != null:
+			return hero.grid.world_of(Vector2i(int(cell[0]), int(cell[1])))
+		return Vector2.INF
 	if near_id != "hero":
 		return _location(near_id)
 	var spot: Vector2 = hero.global_position
@@ -121,8 +130,21 @@ func _creature_count() -> int:
 	).size()
 
 
+## A creature breathes: its sprite bobs a little, each at its own pace.
+func _idle(creature: Node2D) -> void:
+	var sprite := creature.get_node_or_null("Sprite2D") as Sprite2D
+	if sprite == null:
+		return
+	var rest := sprite.position
+	var tween := creature.create_tween().set_loops()
+	var pace := randf_range(0.45, 0.7)
+	tween.tween_property(sprite, "position", rest + Vector2(0, -1.5), pace).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "position", rest, pace).set_trans(Tween.TRANS_SINE)
+
+
 func _set_weather(kind: String, announce: bool = true) -> void:
 	if weather_tint != null:
-		weather_tint.color = WEATHER_COLORS.get(kind, Color.WHITE)
+		weather_tint.color = Color.WHITE if indoor else WEATHER_COLORS.get(kind, Color.WHITE)
+
 	if announce:
 		note.emit("%s: %s" % [Content.t("ui.weather"), kind])

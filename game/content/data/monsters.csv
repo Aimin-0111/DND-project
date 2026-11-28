@@ -1,2 +1,4 @@
-id,level,hp,ac,attack_bonus,damage,xp
-rust_wolf,1,11,13,4,2d4+2,50
+id,level,hp,ac,attack_bonus,damage,xp,gold,boss,special,special_damage,special_every
+rust_wolf,1,11,13,4,2d4+2,50,3,false,,,
+brass_beetle,1,8,13,3,1d4+1,40,6,false,,,
+mill_golem,3,16,12,3,1d6,300,40,true,steam_blast,2d4+1,3

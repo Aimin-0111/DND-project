@@ -92,7 +92,22 @@ func set_location(location_id: String) -> void:
 	state_changed.emit(state)
 
 
+## Tells the screen the state changed (after a fight, which core changed directly).
+func changed() -> void:
+	state_changed.emit(state)
+
+
+## The hero stepped on a door: through it, if it leads somewhere.
+## Returns WorldState.use_door's result.
+func use_door(cell: Vector2i) -> Dictionary:
+	var result := WorldState.use_door(state, world_map, cell)
+	if result["ok"]:
+		state_changed.emit(state)
+	return result
+
+
 ## The hero stopped walking on `cell` of the current square.
+
 func set_hero_cell(cell: Vector2i) -> void:
 	WorldState.set_hero_cell(state, world_map, cell)
 	state_changed.emit(state)

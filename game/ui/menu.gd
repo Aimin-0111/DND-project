@@ -9,6 +9,7 @@ signal save_requested
 signal load_requested
 signal language_chosen(lang: String)
 signal codex_requested
+signal controls_requested
 
 @onready var backdrop: Control = $Backdrop
 @onready var panel: PanelContainer = $Panel
@@ -36,6 +37,14 @@ func _ready() -> void:
 	load_button.pressed.connect(_on_load)
 	codex_button.pressed.connect(_on_codex)
 	ai_settings_button.pressed.connect(_on_ai_settings)
+	# Controls sits just above AI settings (built here, not in menu.tscn).
+	var controls_button := Button.new()
+	controls_button.name = "ControlsButton"
+	controls_button.pressed.connect(func() -> void:
+		close()
+		controls_requested.emit())
+	ai_settings_button.add_sibling(controls_button)
+	ai_settings_button.get_parent().move_child(controls_button, ai_settings_button.get_index())
 	close_button.pressed.connect(close)
 	backdrop.gui_input.connect(_on_backdrop_input)
 	settings_dialog.saved.connect(_refresh_ai_mode)
@@ -105,6 +114,10 @@ func _localize() -> void:
 		button.disabled = lang == Content.language()
 	codex_button.text = Content.t("ui.codex")
 	ai_settings_button.text = Content.t("ui.ai_settings")
+	var controls_button := ai_settings_button.get_parent().get_node_or_null("ControlsButton") as Button
+	if controls_button != null:
+		controls_button.text = Content.t("ui.controls")
+
 	close_button.text = Content.t("ui.close")
 	_refresh_ai_mode()
 

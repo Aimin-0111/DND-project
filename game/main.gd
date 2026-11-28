@@ -6,7 +6,10 @@ extends Control
 ## backpack, the world map, the Codex). It runs the copy-paste turn.
 ## The world stays in a SubViewport so its camera is isolated. A walk that ends
 ## on an exit of the square sends the automatic travel turn ("I head north
-## (forest).", SPEC-main-screen.md); the DM decides the travel.
+## (forest).", SPEC-main-screen.md); the DM decides the travel. A step on a
+## door goes through it at once (a game rule), and touching a creature starts
+## a fight (SPEC-fight.md). The hero walks with clicks and with the keys of
+## Menu → Controls.
 
 const STORY_RATIO := 0.4
 const STACK_BELOW := 900
@@ -39,6 +42,14 @@ const KEY_WORLD_MAP := KEY_M
 
 var _busy := false
 var _stacked := false
+## Menu → Controls (built in _ready), and the keys it chose.
+var controls_window: ControlsWindow
+var controls: ControlsStore
+## The fight screen (built in _ready) and the creature being fought.
+var fight_window: FightWindow
+var _fight_creature: Node2D
+## Tells whether a key is held; tests replace it.
+var key_pressed := Callable(Input, "is_key_pressed")
 
 
 func _ready() -> void:
@@ -68,6 +79,19 @@ func _ready() -> void:
 	menu.language_chosen.connect(_on_language_chosen)
 	menu.codex_requested.connect(_open_window.bind(codex_window))
 	Content.language_changed.connect(_on_language_changed)
+	controls_window = ControlsWindow.new()
+	controls_window.name = "ControlsWindow"
+	$WindowLayer.add_child(controls_window)
+	controls_window.changed.connect(_apply_controls)
+	menu.controls_requested.connect(_open_window.bind(controls_window))
+	_apply_controls(controls_window.controls)
+	fight_window = FightWindow.new()
+	fight_window.name = "FightWindow"
+	$WindowLayer.add_child(fight_window)
+	fight_window.finished.connect(_on_fight_finished)
+	world.creature_touched.connect(_start_fight)
+	# A click on the world leaves the action box, so the movement keys work.
+	world_view.gui_input.connect(_on_world_input)
 	if Content.has_language_choice():
 		_start()
 	else:
@@ -133,12 +157,16 @@ func _on_act() -> void:
 	_play_turn(action, action, "")
 
 
-## A walk ended on `cell`: the state takes the tile, and at an exit the DM is
-## asked about travel at once, with what the player had typed.
+## A walk ended on `cell`: the state takes the tile. On a door the hero goes
+## through at once; at an exit the DM is asked about travel, with what the
+## player had typed.
 func _on_walk_ended(cell: Vector2i) -> void:
 	if _busy:
 		return
 	Game.set_hero_cell(cell)
+	if world.door_at(cell):
+		_go_through_door(cell)
+		return
 	var direction: String = world.exit_at(cell)
 	if direction.is_empty():
 		return
@@ -152,6 +180,119 @@ func _on_walk_ended(cell: Vector2i) -> void:
 	if not typed.is_empty():
 		action += " " + typed
 	_play_turn(action, typed, direction)
+
+
+## Through a door: fade to the box on the other side (no DM turn: doors are a
+## game rule; the next prompt shows where the hero is). Then an autosave.
+func _go_through_door(cell: Vector2i) -> void:
+	_set_busy(true)
+	var result := Game.use_door(cell)
+	if not bool(result.get("ok", false)):
+		_set_busy(false)
+		if not str(result.get("note", "")).is_empty():
+			push_warning("Door: %s" % result["note"])
+		return
+	await world.play_arrival(str(result["square"]), result["cell"])
+	var place := _box_name(str(result["square"]))
+	if not place.is_empty():
+		story_log.add_plain_line(Content.t("ui.entered").format({"place": place}))
+	_autosave()
+	_set_busy(false)
+
+
+## The name of a box for the story: its place's name, else its kind's.
+func _box_name(box: String) -> String:
+	var location := str(Game.state.get("location", ""))
+	if not location.is_empty() and Game.world_map.place_square(location) == box:
+		return Content.t("location.%s.name" % location)
+	for place in Game.world_map.places_in(box):
+		return Content.t("location.%s.name" % place)
+	var kind := Game.world_map.kind_of(box)
+	return "" if kind.is_empty() else Content.t("kind.%s.name" % kind)
+
+
+## The hero touched a creature: a fight against the last creature of that id
+## in this box (they are all alike). Creatures without a monsters.csv row
+## (or while a turn runs) don't fight.
+func _start_fight(creature: Node2D) -> void:
+	if _busy or fight_window.visible:
+		return
+	var id := str(creature.get_meta("creature_id", ""))
+	var row := Content.find("monsters", id)
+	if row.is_empty():
+		creature.set_meta("calm", true)
+		return
+	var index := -1
+	var creatures: Array = Game.state.get("creatures", [])
+	for i in creatures.size():
+		if str(creatures[i].get("id", "")) == id and str(creatures[i].get("square", "")) == str(Game.state.get("square", "")):
+			index = i
+	Game.set_hero_cell(world.hero_cell())
+	_close_windows()
+	_set_busy(true)
+	_fight_creature = creature
+	status_label.text = Content.t("fight.status")
+	story_log.add_plain_line("> " + Content.t("fight.boss_title" if MapLoader.parse_bool(row.get("boss")) == 1 else "fight.title").format(
+		{"name": Content.t("monster.%s.name" % id)}))
+	fight_window.start(Fight.begin(Game.state, Game.dice, row, Content.table("items"), index))
+
+
+## The fight is over: core writes its end into the state; the story gets one
+## line, which also goes into the story so far, so the DM knows next turn.
+func _on_fight_finished(fight: Fight) -> void:
+	var summary := fight.finish(Game.world_map)
+	var name := Content.t("monster.%s.name" % fight.monster_id)
+	var line := Content.t("fight.summary_" + fight.result).format({"name": name, "gold": summary["gold"], "rounds": summary["rounds"]})
+	story_log.add_plain_line(line)
+	GameState.remember_narration(Game.state, line)
+	Game.changed()
+	match fight.result:
+		Fight.WON:
+			if is_instance_valid(_fight_creature):
+				_fight_creature.queue_free()
+		Fight.FLED:
+			if is_instance_valid(_fight_creature):
+				_fight_creature.set_meta("calm", true)
+		Fight.LOST:
+			world.show_state(Game.state)
+	_fight_creature = null
+	_autosave()
+	status_label.text = Content.t("ui.ready")
+	_set_busy(false)
+
+
+func _autosave() -> void:
+	var error := Game.save("auto")
+	if error != OK:
+		status_label.text = Content.t("ui.save_failed")
+		story_log.add_plain_line("%s (%s)." % [Content.t("ui.save_failed"), str(error)])
+
+
+## Menu → Controls changed: clicks on or off; the keys are read every frame.
+func _apply_controls(store: ControlsStore) -> void:
+	controls = store
+	world.hero.click_enabled = store.click_to_move
+
+
+## The movement keys, each frame. They wait like the other shortcuts (a
+## focused text field, a dialog, the menu, a turn, a fight).
+func _physics_process(_delta: float) -> void:
+	world.hero.held_direction = movement_direction()
+
+
+## Where the held movement keys point, or nowhere while they must wait.
+func movement_direction() -> Vector2i:
+	if controls == null or _busy or menu.visible or _shortcuts_blocked():
+		return Vector2i.ZERO
+	return controls.direction(key_pressed)
+
+
+
+func _on_world_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus != null:
+			focus.release_focus()
 
 
 ## The automatic action at an exit: "I head north (forest)." in the player's language.
@@ -211,6 +352,12 @@ func _play_turn(action: String, typed: String, exit_direction: String) -> void:
 		status_label.text = Content.t("ui.save_failed")
 		story_log.add_plain_line("%s (%s)." % [Content.t("ui.save_failed"), str(error)])
 	_set_busy(false)
+	# The DM may have spawned a creature next to the hero: it waits until the
+	# hero walks to it (fights start by touching, never by surprise).
+	for creature in director.creatures_root.get_children():
+		if world.is_touching(creature):
+
+			creature.set_meta("calm", true)
 
 
 func _on_prompt_ready(prompt_text: String) -> void:
@@ -293,6 +440,8 @@ func _on_language_chosen(lang: String) -> void:
 
 ## The Menu button: the menu opens under it, and closes the other windows.
 func _toggle_menu() -> void:
+	if fight_window.visible:
+		return
 	if menu.visible:
 		menu.close()
 		return
@@ -303,7 +452,7 @@ func _toggle_menu() -> void:
 
 ## The menu and the windows over the screen: one is open at a time.
 func _windows() -> Array:
-	return [menu, backpack_window, world_map_window, codex_window]
+	return [menu, backpack_window, world_map_window, codex_window, controls_window]
 
 
 func _close_windows() -> void:
@@ -312,6 +461,8 @@ func _close_windows() -> void:
 
 
 func _toggle_window(window: GameWindow) -> void:
+	if fight_window.visible:
+		return
 	if window.visible:
 		window.close()
 	else:
@@ -319,6 +470,8 @@ func _toggle_window(window: GameWindow) -> void:
 
 
 func _open_window(window: GameWindow) -> void:
+	if fight_window.visible:
+		return
 	_close_windows()
 	window.open()
 
@@ -349,7 +502,10 @@ func _shortcuts_blocked() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
 		return true
+	if fight_window != null and fight_window.visible:
+		return true
 	return dialog.visible or menu.settings_dialog.visible or $DialogLayer.has_node("LanguagePicker")
+
 
 
 ## First launch: the player picks the language before anything else. The

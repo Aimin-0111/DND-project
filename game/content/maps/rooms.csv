@@ -1,0 +1,4 @@
+id,file,kind
+mill_inside,mill-inside.png,indoor
+mill_cellar,mill-cellar.png,indoor
+mill_yard,mill-yard.png,outdoor

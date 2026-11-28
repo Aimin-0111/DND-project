@@ -1,13 +1,15 @@
 class_name SquareGrid
 extends RefCounted
-## Geometry inside one square (64 x 64 tiles): exits, where the hero arrives,
-## stepping back from an exit, which tiles connect. It works on a walkable
-## mask (one byte per tile, 1 = walkable), so it needs no nodes and no files.
-## Rules: SPEC-map.md.
+## Geometry inside one box: a square (64 x 64 tiles) or a room of any size.
+## Exits, where the hero arrives, stepping back from an exit, which tiles
+## connect. It works on a walkable mask (one byte per tile, 1 = walkable), so
+## it needs no nodes and no files. Every function takes the box's size, a
+## square's by default. Rules: SPEC-map.md.
 
 const SIZE := WorldMap.SIZE
 const OPPOSITE := {"north": "south", "south": "north", "east": "west", "west": "east"}
 const NO_CELL := Vector2i(-1, -1)
+const SQUARE := Vector2i(SIZE, SIZE)
 
 
 ## One byte per tile: 1 where the hero can walk.
@@ -19,16 +21,16 @@ static func walkable_mask(tiles: PackedByteArray, table: TileTable) -> PackedByt
 	return mask
 
 
-static func is_inside(cell: Vector2i) -> bool:
-	return cell.x >= 0 and cell.y >= 0 and cell.x < SIZE and cell.y < SIZE
+static func is_inside(cell: Vector2i, size: Vector2i = SQUARE) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < size.x and cell.y < size.y
 
 
-static func is_walkable(mask: PackedByteArray, cell: Vector2i) -> bool:
-	return is_inside(cell) and mask.size() == SIZE * SIZE and mask[cell.y * SIZE + cell.x] == 1
+static func is_walkable(mask: PackedByteArray, cell: Vector2i, size: Vector2i = SQUARE) -> bool:
+	return is_inside(cell, size) and mask.size() == size.x * size.y and mask[cell.y * size.x + cell.x] == 1
 
 
-static func is_border(cell: Vector2i) -> bool:
-	return cell.x == 0 or cell.y == 0 or cell.x == SIZE - 1 or cell.y == SIZE - 1
+static func is_border(cell: Vector2i, size: Vector2i = SQUARE) -> bool:
+	return cell.x == 0 or cell.y == 0 or cell.x == size.x - 1 or cell.y == size.y - 1
 
 
 ## The direction a border tile leads to; "" for corners and inside tiles.
@@ -99,17 +101,21 @@ static func arrival_cell(mask: PackedByteArray, direction: String, from_cell: Ve
 
 ## The walkable tile closest to `target` (straight-line distance; ties go to
 ## the first in reading order). With `inside_only`, border tiles are skipped.
-static func closest_walkable(mask: PackedByteArray, target: Vector2i, inside_only: bool = false) -> Vector2i:
+## `avoid` lists tiles never picked (doors, so the hero doesn't land on one).
+static func closest_walkable(mask: PackedByteArray, target: Vector2i, inside_only: bool = false,
+		size: Vector2i = SQUARE, avoid: Array = []) -> Vector2i:
 	var best := NO_CELL
 	var best_distance := -1
-	if mask.size() != SIZE * SIZE:
+	if mask.size() != size.x * size.y:
 		return best
-	for y in SIZE:
-		for x in SIZE:
-			if mask[y * SIZE + x] != 1:
+	for y in size.y:
+		for x in size.x:
+			if mask[y * size.x + x] != 1:
 				continue
 			var cell := Vector2i(x, y)
-			if inside_only and is_border(cell):
+			if inside_only and is_border(cell, size):
+				continue
+			if avoid.has(cell):
 				continue
 			var distance := (cell - target).length_squared()
 			if best_distance == -1 or distance < best_distance:
@@ -134,20 +140,39 @@ static func step_back_cell(mask: PackedByteArray, cell: Vector2i) -> Vector2i:
 
 ## Every tile reachable from `start` by walking (1 = reached). Diagonal steps
 ## never cut corners in the game, so 4 directions give the same answer.
-static func reachable(mask: PackedByteArray, start: Vector2i) -> PackedByteArray:
+static func reachable(mask: PackedByteArray, start: Vector2i, size: Vector2i = SQUARE) -> PackedByteArray:
 	var seen := PackedByteArray()
-	seen.resize(SIZE * SIZE)
-	if not is_walkable(mask, start):
+	seen.resize(size.x * size.y)
+	if not is_walkable(mask, start, size):
 		return seen
 	var queue: Array[Vector2i] = [start]
-	seen[start.y * SIZE + start.x] = 1
+	seen[start.y * size.x + start.x] = 1
 	var head := 0
 	while head < queue.size():
 		var cell := queue[head]
 		head += 1
 		for step in WorldMap.DIRECTIONS.values():
 			var next: Vector2i = cell + step
-			if is_walkable(mask, next) and seen[next.y * SIZE + next.x] == 0:
-				seen[next.y * SIZE + next.x] = 1
+			if is_walkable(mask, next, size) and seen[next.y * size.x + next.x] == 0:
+				seen[next.y * size.x + next.x] = 1
 				queue.append(next)
 	return seen
+
+
+## Where the hero stands after coming through the door on `door`: the
+## walkable tile next to it that isn't a door (straight neighbours first,
+## the one facing into the box preferred), else the closest such tile.
+static func beside_door(mask: PackedByteArray, door: Vector2i, size: Vector2i, doors_here: Array) -> Vector2i:
+	var centre := Vector2(size) / 2.0
+	var best := NO_CELL
+	var best_score := INF
+	for step in [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 0), Vector2i(-1, 0)]:
+		var next: Vector2i = door + step
+		if is_walkable(mask, next, size) and not doors_here.has(next):
+			var score := (Vector2(next) - centre).length_squared()
+			if score < best_score:
+				best = next
+				best_score = score
+	if best != NO_CELL:
+		return best
+	return closest_walkable(mask, door, false, size, doors_here)

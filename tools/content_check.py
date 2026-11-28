@@ -87,7 +87,13 @@ GENERATOR_TILES = {"grass", "path", "water", "tree", "rock", "flowers", "forest_
 GENERATOR_KINDS = {"meadow", "forest", "hills", "road", "marsh"}
 MAX_PIXELS_REPORTED = 20
 BIG_WORLD = 1024
-TILESET = Path("art") / "tiles-placeholder.png"
+TILESET = Path("art") / "tiles.png"
+# Beta-0.5 rooms (any size, off the world grid) and fights.
+ROOM_KINDS = {"indoor", "outdoor"}
+ROOM_MIN, ROOM_MAX = 3, 128
+ROOM_ID_RE = re.compile(r"^[a-z0-9_]+$")
+# Optional dice columns: empty, or dice notation.
+OPTIONAL_DICE = {"monsters.csv": ("special_damage",), "items.csv": ("damage", "heal")}
 
 INT_COLUMNS = {
     "level",
@@ -158,10 +164,32 @@ def check_data(content: Path, problems: list[str]) -> None:
                 if not DICE_RE.fullmatch(damage):
                     problems.append(f"{path}:{line}: bad dice notation {damage!r}")
 
+            for column in OPTIONAL_DICE.get(name, ()):
+                value = (row.get(column) or "").strip()
+                if value and not DICE_RE.fullmatch(value):
+                    problems.append(f"{path}:{line}: {column} must be empty or dice like 2d6+1, got {value!r}")
+            if name == "monsters.csv":
+                check_fight_columns(path, line, row, problems)
+
         required = REQUIRED_IDS.get(name, set())
         missing_ids = required - seen
         if missing_ids:
             problems.append(f"{path}: missing M1 ids {sorted(missing_ids)}")
+
+
+def check_fight_columns(path: Path, line: int, row: dict[str, str], problems: list[str]) -> None:
+    """The optional fight columns of monsters.csv (Beta-0.5)."""
+    where = f"{path}:{line}"
+    for column in ("gold", "special_every"):
+        value = (row.get(column) or "").strip()
+        if value and not value.isdigit():
+            problems.append(f"{where}: {column} must be empty or a whole number, got {value!r}")
+    boss = (row.get("boss") or "").strip()
+    if boss and parse_bool(boss) is None:
+        problems.append(f"{where}: boss must be true or false, got {boss!r}")
+    special = (row.get("special") or "").strip()
+    if special and not ((row.get("special_damage") or "").strip() and (row.get("special_every") or "").strip()):
+        problems.append(f"{where}: the special {special!r} needs a special_damage and a special_every")
 
 
 def check_keywords(content: Path, langs: list[str], problems: list[str]) -> None:
@@ -337,6 +365,7 @@ def check_tile_table(content: Path, problems: list[str]) -> dict[int, tuple[str,
         walkable = parse_bool(row.get("walkable") or "")
         layer = (row.get("layer") or "").strip()
         index_text = (row.get("tileset_index") or "").strip()
+        variants_text = (row.get("variants") or "").strip() or "1"
         where = f"{path}:{line}"
         if not ID_RE.fullmatch(tile_id):
             problems.append(f"{where}: id {tile_id!r} must match [a-z0-9_]+")
@@ -356,10 +385,13 @@ def check_tile_table(content: Path, problems: list[str]) -> dict[int, tuple[str,
             problems.append(f"{where}: layer must be ground or obstacle, got {layer!r}")
         if layer == "obstacle" and walkable:
             problems.append(f"{where}: {tile_id!r} is an obstacle, so walkable must be false")
+        if not variants_text.isdigit() or int(variants_text) < 1:
+            problems.append(f"{where}: variants must be empty or a whole number of 1 or more, got {variants_text!r}")
+            variants_text = "1"
         if not index_text.isdigit():
             problems.append(f"{where}: tileset_index must be a whole number, got {index_text!r}")
-        elif cells and int(index_text) >= cells:
-            problems.append(f"{where}: tileset_index {index_text} is outside the tileset ({cells} tiles)")
+        elif cells and int(index_text) + int(variants_text) > cells:
+            problems.append(f"{where}: tileset_index {index_text} with {variants_text} variant(s) goes outside the tileset ({cells} tiles)")
         by_colour.setdefault(key, (tile_id, bool(walkable) and layer == "ground"))
     for tile_id in sorted(GENERATOR_TILES - ids):
         problems.append(f"{path}: the square generator needs a tile with id {tile_id!r}")
@@ -496,7 +528,114 @@ def check_maps(content: Path, string_keys: set[str], problems: list[str], warnin
                 warnings.append(f"{path}: {len(exits)} exit tile(s) on the {direction} edge ({first}{more}) "
                                 f"face square {beyond} ({what}), which the hero can't enter")
 
-    check_markers(content, hand_made, files, walkable, names, problems, warnings)
+    rooms = check_rooms(content, tiles, problems, warnings)
+    boxes = {f"sq_{x}_{y}": (SQUARE_SIZE, SQUARE_SIZE, pixels) for (x, y), pixels in hand_made.items()}
+    boxes.update(rooms)
+    on_map = lambda box: (m := SQUARE_ID_RE.fullmatch(box)) is not None and int(m.group(1)) < width and int(m.group(2)) < height
+    check_doors(content, boxes, on_map, walkable, problems, warnings)
+    check_placed(content, boxes, on_map, walkable, problems)
+    check_markers(content, boxes, walkable, names, problems, warnings)
+
+
+def check_rooms(content: Path, tiles: dict[int, tuple[str, bool]], problems: list[str], warnings: list[str]) -> dict:
+    """rooms.csv and maps/rooms/*.png: returns room id -> (width, height, pixels or None)."""
+    maps = content / "maps"
+    path = maps / "rooms.csv"
+    rooms: dict = {}
+    if not path.exists():
+        return rooms
+    rows = read_csv(path, problems)
+    if not rows or not check_columns(path, rows, ("id", "file", "kind"), problems):
+        return rooms
+    used: set[str] = set()
+    for line, row in enumerate(rows, start=2):
+        where = f"{path}:{line}"
+        room_id = (row.get("id") or "").strip()
+        name = (row.get("file") or "").strip()
+        kind = (row.get("kind") or "").strip()
+        if not ROOM_ID_RE.fullmatch(room_id) or SQUARE_ID_RE.fullmatch(room_id):
+            problems.append(f"{where}: id {room_id!r} must match [a-z0-9_]+ and not look like a square id")
+            continue
+        if room_id in rooms:
+            problems.append(f"{where}: duplicate room id {room_id!r}")
+            continue
+        if kind not in ROOM_KINDS:
+            problems.append(f"{where}: kind must be indoor or outdoor, got {kind!r}")
+        if not SQUARE_FILE_RE.fullmatch(name):
+            problems.append(f"{where}: file {name!r} must be a .png named with a-z, 0-9, - or _")
+            continue
+        used.add(name)
+        image = read_image(maps / "rooms" / name, problems)
+        if image is None:
+            rooms[room_id] = (0, 0, None)
+            continue
+        w, h, pixels = image
+        if not (ROOM_MIN <= w <= ROOM_MAX and ROOM_MIN <= h <= ROOM_MAX):
+            problems.append(f"{maps / 'rooms' / name}: the image is {w} x {h} pixels, it must be from {ROOM_MIN} x {ROOM_MIN} to {ROOM_MAX} x {ROOM_MAX}")
+            rooms[room_id] = (w, h, None)
+            continue
+        unknown = [(x, y, key) for y, r in enumerate(pixels) for x, key in enumerate(r) if key not in tiles]
+        report_unknown(maps / "rooms" / name, unknown, "tiles.csv", problems)
+        rooms[room_id] = (w, h, pixels)
+    folder = maps / "rooms"
+    if folder.is_dir():
+        for png in sorted(folder.glob("*.png")):
+            if png.name not in used:
+                warnings.append(f"{png}: not listed in rooms.csv, so it is not used")
+    return rooms
+
+
+def box_cell_ok(boxes: dict, on_map, walkable: dict, box: str, x_text: str, y_text: str) -> str:
+    """'' when (x, y) is a walkable tile of the box, else what is wrong."""
+    if box not in boxes and not on_map(box):
+        return f"{box!r} is not a room of rooms.csv or a square of the world map"
+    if not (x_text.isdigit() and y_text.isdigit()):
+        return "x and y must be whole numbers"
+    w, h, pixels = boxes.get(box, (SQUARE_SIZE, SQUARE_SIZE, None))
+    x, y = int(x_text), int(y_text)
+    if x >= w or y >= h:
+        return f"({x}, {y}) is outside {box} ({w} x {h})"
+    if pixels is not None and not walkable.get(pixels[y][x], False):
+        return f"({x}, {y}) in {box} is a blocked tile"
+    return ""
+
+
+def check_doors(content: Path, boxes: dict, on_map, walkable: dict, problems: list[str], warnings: list[str]) -> None:
+    path = content / "maps" / "doors.csv"
+    if not path.exists():
+        return
+    rows = read_csv(path, problems)
+    if not rows or not check_columns(path, rows, ("from", "x", "y", "to", "to_x", "to_y"), problems):
+        return
+    linked: set[str] = set()
+    for line, row in enumerate(rows, start=2):
+        for box_key, x_key, y_key in (("from", "x", "y"), ("to", "to_x", "to_y")):
+            box = (row.get(box_key) or "").strip()
+            problem = box_cell_ok(boxes, on_map, walkable, box, (row.get(x_key) or "").strip(), (row.get(y_key) or "").strip())
+            if problem:
+                problems.append(f"{path}:{line}: {box_key}: {problem}")
+            linked.add(box)
+    for room_id, (_, _, pixels) in boxes.items():
+        if not SQUARE_ID_RE.fullmatch(room_id) and room_id not in linked:
+            warnings.append(f"{path}: no door leads to the room {room_id!r}, so the hero can never enter it")
+
+
+def check_placed(content: Path, boxes: dict, on_map, walkable: dict, problems: list[str]) -> None:
+    path = content / "maps" / "creatures.csv"
+    if not path.exists():
+        return
+    rows = read_csv(path, problems)
+    if not rows or not check_columns(path, rows, ("box", "creature", "x", "y"), problems):
+        return
+    monsters = {(r.get("id") or "").strip() for r in read_csv(content / "data" / "monsters.csv", [])}
+    for line, row in enumerate(rows, start=2):
+        creature = (row.get("creature") or "").strip()
+        if creature not in monsters:
+            problems.append(f"{path}:{line}: creature {creature!r} is not in monsters.csv")
+        problem = box_cell_ok(boxes, on_map, walkable, (row.get("box") or "").strip(),
+                              (row.get("x") or "").strip(), (row.get("y") or "").strip())
+        if problem:
+            problems.append(f"{path}:{line}: {problem}")
 
 
 def check_square(path: Path, tiles: dict[int, tuple[str, bool]], problems: list[str]):
@@ -512,7 +651,7 @@ def check_square(path: Path, tiles: dict[int, tuple[str, bool]], problems: list[
     return pixels
 
 
-def check_markers(content, hand_made, files, walkable, names, problems, warnings) -> None:
+def check_markers(content, boxes, walkable, names, problems, warnings) -> None:
     path = content / "data" / "locations.csv"
     rows = read_csv(path, problems)
     if not rows or not check_columns(path, rows, ("id", "square", "x", "y"), problems):
@@ -525,21 +664,20 @@ def check_markers(content, hand_made, files, walkable, names, problems, warnings
         if not square:
             warnings.append(f"{where}: {place!r} has no square, so the hero can never reach it")
             continue
-        found = SQUARE_ID_RE.fullmatch(square)
-        at = (int(found.group(1)), int(found.group(2))) if found else None
-        if at not in hand_made:
-            problems.append(f"{where}: {place!r} is in {square!r}, which is not a hand-made square in squares.csv")
+        if square not in boxes:
+            problems.append(f"{where}: {place!r} is in {square!r}, which is not a hand-made square in squares.csv or a room in rooms.csv")
             continue
-        if not (x_text.isdigit() and y_text.isdigit()) or int(x_text) >= SQUARE_SIZE or int(y_text) >= SQUARE_SIZE:
-            problems.append(f"{where}: the marker of {place!r} at ({x_text}, {y_text}) is outside its square (0 to {SQUARE_SIZE - 1})")
+        w, h, pixels = boxes[square]
+        if not (x_text.isdigit() and y_text.isdigit()) or int(x_text) >= w or int(y_text) >= h:
+            problems.append(f"{where}: the marker of {place!r} at ({x_text}, {y_text}) is outside {square} (0 to {w - 1}, 0 to {h - 1})")
             continue
-        pixels = hand_made[at]
         if pixels is None:
             continue
         key = pixels[int(y_text)][int(x_text)]
         if not walkable.get(key, False):
             tile = names.get(key, colour_name(key))
-            problems.append(f"{where}: the marker of {place!r} at ({x_text}, {y_text}) in {files[at]} is on a blocked tile ({tile})")
+            problems.append(f"{where}: the marker of {place!r} at ({x_text}, {y_text}) in {square} is on a blocked tile ({tile})")
+
 
 
 def main() -> int:

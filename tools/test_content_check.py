@@ -85,7 +85,7 @@ class MapCheckTest(unittest.TestCase):
     def test_marker_outside_its_square(self) -> None:
         self.edit("data/locations.csv", "mill_road,sq_24_24,16,31", "mill_road,sq_24_24,70,31")
         problems, _ = self.run_check()
-        self.assert_reported(problems, "locations.csv:2", "'mill_road'", "outside its square")
+        self.assert_reported(problems, "locations.csv:2", "'mill_road'", "is outside sq_24_24")
 
     def test_marker_on_blocked_tile(self) -> None:
         self.edit("data/locations.csv", "mill_road,sq_24_24,16,31", "mill_road,sq_24_24,45,10")
@@ -122,17 +122,17 @@ class MapCheckTest(unittest.TestCase):
         self.assert_reported(warnings, "mill-road.png", "4 exit tile(s) on the north edge", "(24, 23) (lake)")
 
     def test_obstacle_marked_walkable(self) -> None:
-        self.edit("maps/tiles.csv", "tree,#1d4d24,false,obstacle,3", "tree,#1d4d24,true,obstacle,3")
+        self.edit("maps/tiles.csv", "tree,#1d4d24,false,obstacle,12", "tree,#1d4d24,true,obstacle,12")
         problems, _ = self.run_check()
         self.assert_reported(problems, "tiles.csv:5", "obstacle", "walkable must be false")
 
     def test_tileset_index_outside_the_tileset(self) -> None:
-        self.edit("maps/tiles.csv", "wheel,#c9a227,false,obstacle,14", "wheel,#c9a227,false,obstacle,40")
+        self.edit("maps/tiles.csv", "wheel,#c9a227,false,obstacle,41", "wheel,#c9a227,false,obstacle,90")
         problems, _ = self.run_check()
-        self.assert_reported(problems, "tiles.csv", "tileset_index 40 is outside the tileset")
+        self.assert_reported(problems, "tiles.csv", "tileset_index 90 with 1 variant(s) goes outside the tileset")
 
     def test_generator_tile_missing(self) -> None:
-        self.edit("maps/tiles.csv", "reeds,#b5b84a,false,obstacle,13\n", "")
+        self.edit("maps/tiles.csv", "reeds,#b5b84a,false,obstacle,39,2\n", "")
         problems, _ = self.run_check()
         self.assert_reported(problems, "tiles.csv", "needs a tile with id 'reeds'")
 
@@ -148,14 +148,14 @@ class MapCheckTest(unittest.TestCase):
         self.assert_reported(problems, "kinds.csv:4", "#8fd16a is already used by 'meadow'")
 
     def test_bad_colour_and_flag(self) -> None:
-        self.edit("maps/tiles.csv", "sand,#e8d49a,true,ground,8", "sand,e8d49a,maybe,ground,8")
+        self.edit("maps/tiles.csv", "sand,#e8d49a,true,ground,26", "sand,e8d49a,maybe,ground,26")
         self.edit("maps/kinds.csv", "marsh,#6f8f6a,true", "marsh,#6f8f6a,oui")
         problems, _ = self.run_check()
         self.assert_reported(problems, "tiles.csv:10", "must look like #4c9a3c")
         self.assert_reported(problems, "kinds.csv:6", "passable must be true or false")
 
     def test_duplicate_tile_id_and_bad_layer(self) -> None:
-        self.edit("maps/tiles.csv", "sand,#e8d49a,true,ground,8", "grass,#e8d49a,true,floor,8")
+        self.edit("maps/tiles.csv", "sand,#e8d49a,true,ground,26", "grass,#e8d49a,true,floor,26")
         problems, _ = self.run_check()
         self.assert_reported(problems, "tiles.csv:10", "duplicate id 'grass'")
         self.assert_reported(problems, "tiles.csv:10", "layer must be ground or obstacle")
@@ -177,9 +177,9 @@ class MapCheckTest(unittest.TestCase):
         self.assert_reported(warnings, "spare.png", "not listed in squares.csv")
 
     def test_tileset_size(self) -> None:
-        write_png(self.content / "art/tiles-placeholder.png", 100, 64, [[(0, 0, 0, 0)] * 100] * 64)
+        write_png(self.content / "art/tiles.png", 100, 64, [[(0, 0, 0, 0)] * 100] * 64)
         problems, _ = self.run_check()
-        self.assert_reported(problems, "tiles-placeholder.png", "100 x 64 is not a whole number of 32 px tiles")
+        self.assert_reported(problems, "tiles.png", "100 x 64 is not a whole number of 32 px tiles")
 
     def test_missing_world_map(self) -> None:
         (self.content / "maps/world.png").unlink()
@@ -194,8 +194,8 @@ class MapCheckTest(unittest.TestCase):
         self.assert_reported(problems, "locations.csv", "missing columns ['square']")
 
     def test_bad_ids_and_numbers(self) -> None:
-        self.edit("maps/tiles.csv", "dirt,#9a7148,true,ground,11", "Dirt,#9a7148,true,ground,eleven")
-        self.edit("maps/tiles.csv", "mud,#6e5f3a,true,ground,12", "mud,#4c9a3c,true,ground,12")
+        self.edit("maps/tiles.csv", "dirt,#9a7148,true,ground,35", "Dirt,#9a7148,true,ground,eleven")
+        self.edit("maps/tiles.csv", "mud,#6e5f3a,true,ground,37", "mud,#4c9a3c,true,ground,37")
         self.edit("maps/kinds.csv", "hills,#b08a4f,true", "Hills!,#b08a4f,true")
         self.edit("maps/squares.csv", "mill-road.png,24,24,road\n", "mill-road.png,24,24,road\nmill-road.png,-1,2,road\n")
         problems, _ = self.run_check()

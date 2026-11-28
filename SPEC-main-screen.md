@@ -214,6 +214,19 @@ Beta-0.4: the settings dialog opens from Menu → AI settings, and the language 
 
 **M2 settings:** reduce motion, text speed, animated entries.
 
+### Controls (Beta-0.5)
+
+Menu → Controls (above AI settings) opens the Controls window. It is stored in the `[controls]` section of the settings file on the device, never in a save, and applies at once.
+
+- **Move with:** `W A S D` (default), `Z Q S D (AZERTY)` or `Arrow keys only`. The arrow keys always work too.
+- Holding a key walks one tile per step in 8 directions (two keys make a diagonal). A diagonal never cuts a corner: the hero slides along the free side.
+- **Click to move:** on (default) or off.
+- The movement keys wait like the other shortcuts: while a text field has focus, while a dialog or the menu is open, during a turn and during a fight. The backpack and world map windows don't stop them.
+- A click on the world takes the focus away from the action box, so the keys work again.
+- The window lists the keys: B backpack, M map, Esc close, and 1–4 in a fight.
+- A step that ends on an exit sends the travel turn, and one on a door goes through it, exactly like a click.
+
+
 ## Wiring (provisional: Godot)
 
 - Three autoloads with no rules in them: `Game` (holds the state, emits `state_changed`, calls `core`), `Content` (calls `content.load_all()` at start), `DM` (holds the active connection, calls `dm`).

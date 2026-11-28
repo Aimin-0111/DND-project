@@ -40,12 +40,17 @@ func _refresh(state: Dictionary) -> void:
 	weather_label.text = Content.t("weather.%s" % str(state.get("weather", "clear")))
 
 
-## The place where the hero is; between places (and in generated squares),
-## the kind of the square ("Forest" / "Forêt").
+## The place where the hero is; in a room, the room's own place; between
+## places (and in generated squares), the kind of the square ("Forest" / "Forêt").
 func _place_text(state: Dictionary) -> String:
 	var location := str(state.get("location", ""))
 	if not location.is_empty():
 		return Content.t("location.%s.name" % location)
+	var box := str(state.get("square", ""))
+	if Game.world_map != null and Game.world_map.is_room(box):
+		for place in Game.world_map.places_in(box):
+			return Content.t("location.%s.name" % place)
+
 	var kind := Game.square_kind()
 	return "" if kind.is_empty() else Content.t("kind.%s.name" % kind)
 

@@ -6,8 +6,9 @@ func run() -> Array:
 	var failures: Array = []
 
 	var monsters: Array = ContentLoader.load_csv("res://content/data/monsters.csv")
-	if monsters.size() != 1:
-		failures.append("monsters.csv: expected 1 row, got %d" % monsters.size())
+	if monsters.size() < 3:
+		failures.append("monsters.csv: expected the wolf, the beetle and the golem, got %d rows" % monsters.size())
+
 	var wolf: Dictionary = ContentLoader.by_id(monsters).get("rust_wolf", {})
 	if int(wolf.get("hp", 0)) != 11:
 		failures.append("rust_wolf.hp: expected 11, got %s" % str(wolf.get("hp")))

@@ -94,6 +94,18 @@ Names are provisional (GDScript style); the behaviour is the contract. Code live
 - Automated (`tests/unit/`): loading the real map files and crafted images; ids; neighbours; generator properties over many seeds; arrival and step-back cases.
 - Manual: walk through several generated squares and check they look like their kind.
 
+## Rooms and doors (Beta-0.5)
+
+*Asked by the lead on November 27, 2026: "indoor, outdoor, we will treat them as boxes, and different boxes can have different sizes".*
+
+- A **box** is any area the hero can stand in: a **square** of the world grid (always 64 × 64), or a **room**. The state's `square` holds the box the hero is in, a square id or a room id. The state shape doesn't change, so there is no migration.
+- **Rooms** (`content/maps/rooms.csv`: `id`, `file`, `kind`) are off the grid and can be any size from 3 × 3 to 128 × 128 tiles. Each one is a PNG in `content/maps/rooms/`, one pixel per tile, in the `tiles.csv` colours, like a hand-made square. `kind` is `indoor` (dark around it, no weather tint) or `outdoor` (forest green around it, weather as usual). A room id never looks like a square id.
+- **Doors** (`content/maps/doors.csv`: `from`, `x`, `y`, `to`, `to_x`, `to_y`): one row links two walkable tiles of two boxes, both ways. Stepping on a door tile goes through **at once**: a game rule with a fade, no DM turn. The hero lands on the walkable tile next to the far door that isn't a door (the one nearest the box's middle). Any walkable tile can be a door; the `door` and `stairs` tiles only show it.
+- **Rooms have no edge exits:** they are left through their doors. `travel` never goes to a room or leaves one by a direction. Rooms are not travel targets, and the MAP part lists them as `doors_to`.
+- **Placed creatures** (`content/maps/creatures.csv`: `box`, `creature`, `x`, `y`) join the state on the box's **first visit**, standing on their tile. A defeated one never comes back.
+- **The minimap** inside a room shows the square its doors lead to. **Places** (`locations.csv`) may be in rooms. The top bar shows the room's place name.
+- **Beta-0.5 content:** the Mill Road's mill gets a roof, a front wall and a door at (54, 27). It leads to `mill_inside` (18 × 12, indoor, a brass beetle). From there, a back door goes to `mill_yard` (24 × 16, outdoor, a rust wolf) and stairs go down to `mill_cellar` (14 × 10, indoor, the mill golem boss). `tools/make_rooms.py` drew the first versions.
+
 ## Boundaries (module)
 
 - **Always:** stay deterministic; report file problems with the file and the pixel position; keep going with the rest.
@@ -103,6 +115,7 @@ Names are provisional (GDScript style); the behaviour is the contract. Code live
 ## Open questions
 
 - Recipes per kind live in code. If the artist wants to add kinds or tune their look, move them into `kinds.csv` columns (an "ask first" format change).
-- The tileset file is fixed (`art/tiles-placeholder.png`, 32 px cells). When the artist's tileset arrives: rename it, or add a setting.
+- The tileset file is fixed (`art/tiles.png`, 32 px cells, Beta-0.5). `tiles.csv` gives each tile a `variants` count: that many cells from its `tileset_index` on. The world picks one per tile from its position.
+
 - New games use the fixed seed 12345, so every new game generates the same squares. Random seed per new game?
 - The visited-squares list in the prompt grows with every square entered. Cap it (for example the hand-made squares plus the last 20) if prompts get long.

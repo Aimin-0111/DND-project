@@ -1,3 +1,3 @@
-id,type,price
-rusty_sword,weapon,8
-healing_draught,potion,25
+id,type,price,damage,heal
+rusty_sword,weapon,8,1d6,
+healing_draught,potion,25,,2d4+2

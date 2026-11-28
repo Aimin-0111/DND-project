@@ -1,8 +1,9 @@
 class_name WorldState
 extends RefCounted
 ## The state side of the world map (state v2): where the hero is, travel
-## between squares, the squares visited and the stored tiles of the generated
-## ones. Static functions on the state Dictionary; the loaded WorldMap comes in
+## between squares, doors between boxes (squares and rooms), the boxes visited
+## and the stored tiles of the generated squares. "square" in the state is the
+## box the hero is in: a square id or a room id. Static functions on the state Dictionary; the loaded WorldMap comes in
 ## as data, so nothing here reads files or touches nodes.
 ## Rules: SPEC-core.md (state) and SPEC-map.md (geography).
 
@@ -98,10 +99,10 @@ static func travel(state: Dictionary, world: WorldMap, to: String) -> Dictionary
 		destination = world.neighbour(current, to)
 		if destination.is_empty() or not world.can_enter(destination):
 			return _refused("travel %s: there is no square the hero can enter that way." % to)
-	elif destination == current or not _visited(state).has(destination):
+	elif destination == current or not _visited(state).has(destination) or world.is_room(destination):
 		return _refused("travel: '%s' is not another square the hero has visited." % to)
 	var tiles := square_tiles(state, world, destination, false)
-	if tiles.size() != SIZE * SIZE:
+	if tiles.size() != world.box_area(destination):
 		return _refused("travel: %s can't be entered." % destination)
 	var mask := SquareGrid.walkable_mask(tiles, world.tiles)
 	var arrival := SquareGrid.NO_CELL
@@ -116,11 +117,83 @@ static func travel(state: Dictionary, world: WorldMap, to: String) -> Dictionary
 		return _refused("travel: %s has no tile to stand on." % destination)
 	if not current.is_empty():
 		_remember(state, current)["cell"] = [from_cell.x, from_cell.y]
+	var first := not _visited(state).has(destination)
 	square_tiles(state, world, destination)
 	_remember(state, destination)
+	if first:
+		_place_creatures(state, world, destination)
 	state["square"] = destination
 	set_hero_cell(state, world, arrival)
 	return {"ok": true, "square": destination, "cell": arrival, "note": ""}
+
+
+## The hero stepped on `cell`: when it is a door, goes through it at once (a
+## game rule, no DM turn). Returns {"ok", "square", "cell", "note"}; "ok" is
+## false when `cell` is no door or the other side can't be entered.
+## The tile left is remembered as the tile beside this door, so a later
+## travel back by id doesn't land the hero on the door itself.
+static func use_door(state: Dictionary, world: WorldMap, cell: Vector2i) -> Dictionary:
+	var current := str(state.get("square", ""))
+	var link := world.door_at(current, cell)
+	if link.is_empty():
+		return _refused("")
+	var destination: String = link["to"]
+	if not world.can_enter(destination):
+		return _refused("door: %s can't be entered." % destination)
+	var size := world.box_size(destination)
+	var tiles := square_tiles(state, world, destination, false)
+	if tiles.size() != size.x * size.y:
+		return _refused("door: %s can't be entered." % destination)
+	var mask := SquareGrid.walkable_mask(tiles, world.tiles)
+	var arrival := SquareGrid.beside_door(mask, link["cell"], size, door_cells(world, destination))
+	if arrival == SquareGrid.NO_CELL:
+		return _refused("door: %s has no tile to stand on." % destination)
+	var here_mask := SquareGrid.walkable_mask(square_tiles(state, world, current, false), world.tiles)
+	var left := SquareGrid.beside_door(here_mask, cell, world.box_size(current), door_cells(world, current))
+	_remember(state, current)["cell"] = [left.x, left.y] if left != SquareGrid.NO_CELL else [cell.x, cell.y]
+	var first := not _visited(state).has(destination)
+	square_tiles(state, world, destination)
+	_remember(state, destination)
+	if first:
+		_place_creatures(state, world, destination)
+	state["square"] = destination
+	set_hero_cell(state, world, arrival)
+	return {"ok": true, "square": destination, "cell": arrival, "note": ""}
+
+
+## After a lost fight: the hero wakes up on the start place's marker.
+static func wake_at_start(state: Dictionary, world: WorldMap) -> void:
+	var square := world.place_square(START_PLACE)
+	if square.is_empty() or not world.can_enter(square):
+		return
+	var cell := world.place_cell(START_PLACE)
+	_remember(state, square)
+	state["square"] = square
+	set_hero_cell(state, world, cell)
+
+
+## The door tiles of a box.
+
+static func door_cells(world: WorldMap, box: String) -> Array:
+	var out: Array = []
+	for link in world.doors:
+		if link["a"] == box:
+			out.append(link["a_cell"])
+		if link["b"] == box:
+			out.append(link["b_cell"])
+	return out
+
+
+## The first visit of a box: its placed creatures (creatures.csv) join the
+## state. They stay until defeated; a box is only visited once for the first time.
+static func _place_creatures(state: Dictionary, world: WorldMap, box: String) -> void:
+	if not (state.get("creatures") is Array):
+		state["creatures"] = []
+	for entry in world.placed_in(box):
+		if GameState.creatures_in(state, box) >= GameState.MAX_CREATURES:
+			return
+		var cell: Vector2i = entry["cell"]
+		state["creatures"].append({"id": entry["creature"], "near": "", "square": box, "cell": [cell.x, cell.y]})
 
 
 ## The hero stopped on `cell`: store it, and the place whose area holds it.
@@ -145,7 +218,7 @@ static func settle(state: Dictionary, world: WorldMap) -> Array:
 		state["squares"] = {}
 	var square := str(state.get("square", ""))
 	var location := str(state.get("location", ""))
-	if square.is_empty() or square_tiles(state, world, square, false).size() != SIZE * SIZE:
+	if square.is_empty() or square_tiles(state, world, square, false).size() != world.box_area(square):
 		var fallback := world.place_square(location)
 		if fallback.is_empty() or not world.can_enter(fallback):
 			fallback = world.place_square(START_PLACE)
@@ -153,20 +226,24 @@ static func settle(state: Dictionary, world: WorldMap) -> Array:
 			notes.append("The saved square '%s' can't be used any more: back to %s." % [square, fallback])
 			state["hero_cell"] = []
 		square = fallback
-	if square.is_empty() or square_tiles(state, world, square, false).size() != SIZE * SIZE:
+	if square.is_empty() or square_tiles(state, world, square, false).size() != world.box_area(square):
 		notes.append("No start square: check locations.csv and squares.csv.")
 		return notes
 	state["square"] = square
+	var size := world.box_size(square)
 	var mask := SquareGrid.walkable_mask(square_tiles(state, world, square), world.tiles)
 	var cell := hero_cell(state)
-	if not SquareGrid.is_walkable(mask, cell):
+	if not SquareGrid.is_walkable(mask, cell, size):
 		var target := cell
 		if world.place_square(location) == square:
 			target = world.place_cell(location)
-		elif not SquareGrid.is_inside(cell):
-			target = MIDDLE
-		cell = target if SquareGrid.is_walkable(mask, target) else SquareGrid.closest_walkable(mask, target)
+		elif not SquareGrid.is_inside(cell, size):
+			target = size / 2
+		cell = target if SquareGrid.is_walkable(mask, target, size) else SquareGrid.closest_walkable(mask, target, false, size)
+	var first := not _visited(state).has(square)
 	_remember(state, square)
+	if first:
+		_place_creatures(state, world, square)
 	set_hero_cell(state, world, cell)
 	var creatures: Variant = state.get("creatures")
 	if creatures is Array:
@@ -186,7 +263,7 @@ static func travel_targets(state: Dictionary, world: WorldMap) -> Array:
 		if world.can_enter(world.neighbour(square, direction)):
 			out.append(direction)
 	for id in _visited(state):
-		if id != square:
+		if id != square and not world.is_room(id):
 			out.append(id)
 	return out
 
@@ -208,15 +285,18 @@ static func view(state: Dictionary, world: WorldMap) -> Dictionary:
 		}
 	var visited_view: Array = []
 	for id in visited:
-		visited_view.append({"square": id, "kind": world.kind_of(id), "places": world.places_in(id)})
+		if not world.is_room(id):
+			visited_view.append({"square": id, "kind": world.kind_of(id), "places": world.places_in(id)})
 	return {
 		"square": square,
 		"kind": world.kind_of(square),
 		"made": "by_hand" if world.is_hand_made(square) else "generated",
 		"places": world.places_in(square),
+		"doors_to": world.doors_from(square),
 		"neighbours": neighbours,
 		"visited": visited_view,
 	}
+
 
 
 static func _visited(state: Dictionary) -> Dictionary:

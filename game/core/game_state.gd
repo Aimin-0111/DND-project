@@ -201,7 +201,25 @@ static func allowed_skills(_state: Dictionary) -> Array:
 	return SKILL_ABILITY.keys()
 
 
+## Takes `qty` of an item out of the pack; the entry leaves the pack at 0.
+## Returns false (and changes nothing) when the pack holds fewer.
+static func remove_item(state: Dictionary, item_id: String, qty: int) -> bool:
+	var pack: Array = state.get("pack", [])
+	for i in pack.size():
+		if str(pack[i].get("id", "")) == item_id:
+			var left := int(pack[i].get("qty", 0)) - qty
+			if left < 0:
+				return false
+			if left == 0:
+				pack.remove_at(i)
+			else:
+				pack[i]["qty"] = left
+			return true
+	return false
+
+
 static func _add_item(state: Dictionary, item_id: String, qty: int) -> void:
+
 	if qty <= 0:
 		return
 	for entry in state["pack"]:

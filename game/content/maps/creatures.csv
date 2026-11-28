@@ -1,0 +1,4 @@
+box,creature,x,y
+mill_inside,brass_beetle,4,8
+mill_yard,rust_wolf,15,5
+mill_cellar,mill_golem,8,4

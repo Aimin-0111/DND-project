@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://chg3lqfkbx7q1"
+
+[deps]
+
+files=["res://content/maps/creatures.creature.translation", "res://content/maps/creatures.x.translation", "res://content/maps/creatures.y.translation"]
+
+source_file="res://content/maps/creatures.csv"
+dest_files=["res://content/maps/creatures.creature.translation", "res://content/maps/creatures.x.translation", "res://content/maps/creatures.y.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

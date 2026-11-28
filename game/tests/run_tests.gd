@@ -35,13 +35,18 @@ const TEST_PATHS := [
 	"res://tests/unit/test_save_slots.gd",
 	"res://tests/integration/test_web_bugs.gd",
 	"res://tests/integration/test_layout_v2.gd",
+	"res://tests/unit/test_fight.gd",
+	"res://tests/unit/test_rooms.gd",
+	"res://tests/unit/test_controls.gd",
+	"res://tests/integration/test_beta05_screen.gd",
+
 ]
 
 
 func _initialize() -> void:
 	# Let the scene tree settle once so _ready() has run on test scenes.
 	await process_frame
-	_run_all()
+	await _run_all()
 
 
 func _run_all() -> void:
@@ -63,7 +68,8 @@ func _run_all() -> void:
 		if not test_case.has_method("run"):
 			failures.append("%s: missing run()" % path)
 			continue
-		var result = test_case.run()
+		# A test may wait for frames (fades, fight animations): await it.
+		var result = await test_case.run()
 		files += 1
 		if not (result is Array):
 			failures.append("%s: run() must return Array" % path)

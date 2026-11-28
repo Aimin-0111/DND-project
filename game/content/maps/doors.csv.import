@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://d3n64t85ktxyh"
+
+[deps]
+
+files=["res://content/maps/doors.x.translation", "res://content/maps/doors.y.translation", "res://content/maps/doors.to.translation", "res://content/maps/doors.to.translation", "res://content/maps/doors.to.translation"]
+
+source_file="res://content/maps/doors.csv"
+dest_files=["res://content/maps/doors.x.translation", "res://content/maps/doors.y.translation", "res://content/maps/doors.to.translation", "res://content/maps/doors.to.translation", "res://content/maps/doors.to.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

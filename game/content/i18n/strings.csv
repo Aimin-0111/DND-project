@@ -99,3 +99,51 @@ ui.world_map,Carte du monde,World map
 ui.world_map_hint,Clique ou appuie sur M pour la carte du monde,Click or press M for the world map
 ui.codex,Codex,Codex
 ui.tracked_quest,{title} : {stage},{title}: {stage}
+ui.controls,Commandes,Controls
+ui.entered,Vous entrez : {place}.,You enter: {place}.
+controls.move,Se déplacer avec :,Move with:
+controls.wasd,W A S D,W A S D
+controls.zqsd,Z Q S D (AZERTY),Z Q S D (AZERTY)
+controls.arrows,Flèches seulement,Arrow keys only
+controls.click,Cliquer pour marcher,Click to move
+controls.help,Les flèches marchent toujours. Cliquez sur le monde ou appuyez sur Échap pour quitter la zone de texte avant de marcher. B : sac · M : carte · Échap : fermer. En combat : 1 Attaquer · 2 Se protéger · 3 Potion · 4 Fuir.,The arrow keys always work. Click the world or press Esc to leave the text box before walking. B: backpack · M: map · Esc: close. In a fight: 1 Attack · 2 Guard · 3 Potion · 4 Flee.
+kind.indoor.name,Intérieur,Indoors
+kind.outdoor.name,Dehors,Outdoors
+location.mill_hall.name,Salle du moulin,Mill Hall
+location.cellar.name,Cave du moulin,Mill Cellar
+location.back_yard.name,Cour du moulin,Mill Yard
+monster.brass_beetle.name,Scarabée de laiton,Brass Beetle
+monster.mill_golem.name,Golem du moulin,Mill Golem
+fight.title,Combat : {name},Fight: {name}
+fight.boss_title,BOSS : {name},BOSS: {name}
+fight.status,Combat en cours,Fighting
+fight.intro,{name} vous barre la route !,{name} blocks your way!
+fight.boss_intro,{name} se dresse devant vous. Pas de fuite possible !,{name} rises before you. There is no running away!
+fight.attack,Attaquer,Attack
+fight.guard,Se protéger,Guard
+fight.potion,Potion ({n}),Potion ({n})
+fight.flee,Fuir,Flee
+fight.continue,Continuer,Continue
+fight.hero_hit,Vous touchez : {damage} dégâts. (d20 {d20} → {total} contre CA {ac}),You hit for {damage}. (d20 {d20} → {total} vs AC {ac})
+fight.hero_critical,Coup critique ! {damage} dégâts.,Critical hit! {damage} damage.
+fight.hero_miss,Vous ratez. (d20 {d20} → {total} contre CA {ac}),You miss. (d20 {d20} → {total} vs AC {ac})
+fight.hero_guard,Vous levez votre garde (+2 CA).,You raise your guard (+2 AC).
+fight.hero_heal,Vous buvez une potion : +{amount} PV.,You drink a potion: +{amount} HP.
+fight.hero_refused,Impossible pour l'instant.,You can't do that now.
+fight.hero_fled,Vous vous échappez ! (d20 {d20} → {total} contre {dc}),You get away! (d20 {d20} → {total} vs {dc})
+fight.hero_flee_failed,Vous n'arrivez pas à fuir. (d20 {d20} → {total} contre {dc}),You fail to get away. (d20 {d20} → {total} vs {dc})
+fight.hero_down,Vous vous effondrez…,You collapse…
+fight.monster_hit,{name} vous touche : {damage} dégâts.,{name} hits you for {damage}.
+fight.monster_critical,{name} frappe fort : {damage} dégâts !,{name} lands a critical hit: {damage}!
+fight.monster_miss,{name} vous rate.,{name} misses.
+fight.monster_enraged,{name} entre en rage !,{name} is enraged!
+fight.monster_down,{name} tombe.,{name} falls.
+fight.special.steam_blast,{name} crache une vapeur brûlante : {damage} dégâts.,{name} vents scalding steam: {damage} damage.
+fight.guarded, (moitié moins grâce à votre garde), (halved by your guard)
+fight.won,Victoire sur {name} ! +{gold} or.,{name} is defeated! +{gold} gold.
+fight.lost,Tout devient noir…,Everything goes dark…
+fight.escaped,Vous avez fui le combat.,You fled the fight.
+fight.summary_won,Kael a vaincu {name} et gagné {gold} or.,Kael defeated {name} and won {gold} gold.
+fight.summary_fled,Kael a fui devant {name}.,Kael fled from {name}.
+fight.summary_lost,"Kael a été assommé par {name} et s'est réveillé sur la route du moulin, des heures plus tard.",Kael was knocked out by {name} and woke up on the Mill Road hours later.
+fight.charge.steam_blast,De la vapeur siffle dans les évents de {name}… Protégez-vous pour réduire le jet !,Steam hisses in {name}'s vents… Guard to halve the blast!

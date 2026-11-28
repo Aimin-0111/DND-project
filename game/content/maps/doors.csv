@@ -1,0 +1,4 @@
+from,x,y,to,to_x,to_y
+sq_24_24,54,27,mill_inside,8,11
+mill_inside,17,5,mill_yard,0,7
+mill_inside,12,9,mill_cellar,1,8

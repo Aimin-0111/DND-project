@@ -29,9 +29,14 @@ var frame_index := -1
 var painted: Texture2D
 
 
-## Takes the squares to show from the state, then redraws.
+## Takes the squares to show from the state, then redraws. Inside a room the
+## map shows the square the room's doors lead to.
 func refresh(world: WorldMap, state: Dictionary) -> void:
-	var hero := WorldMap.coords(str(state.get("square", "")))
+	var box := str(state.get("square", ""))
+	if world != null:
+		box = world.outdoor_square(box)
+	var hero := WorldMap.coords(box)
+
 	if around > 0:
 		columns = around
 		rows = around
